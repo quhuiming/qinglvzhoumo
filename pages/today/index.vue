@@ -1,15 +1,6 @@
 <template>
   <view class="today-page">
-    <view class="phone-shell">
-      <view class="status-row" aria-hidden="true">
-        <view class="signal-bars">
-          <text></text>
-          <text></text>
-          <text></text>
-        </view>
-        <view class="battery"></view>
-      </view>
-
+    <view class="today-content">
       <view class="hero">
         <text class="eyebrow">情侣周末</text>
         <text class="hello">你好，{{ state.profile.me }} & {{ state.profile.partner }}</text>
@@ -130,82 +121,26 @@ function handleToggleDone() {
 <style scoped>
 .today-page {
   min-height: 100vh;
-  background: #f5f3ef;
-  padding: 24rpx;
+  width: 100%;
+  background:
+    radial-gradient(circle at 8% 12%, rgba(255, 126, 100, 0.18) 0, transparent 28%),
+    radial-gradient(circle at 88% 24%, rgba(232, 169, 113, 0.18) 0, transparent 26%),
+    linear-gradient(180deg, #ffe9dd 0%, #fff8f3 48%, #fff7f1 100%);
+  padding: 34rpx 24rpx 150rpx;
 }
 
-.phone-shell {
+.today-content {
   position: relative;
-  overflow: hidden;
   width: 100%;
   max-width: 760rpx;
-  min-height: calc(100vh - 48rpx);
-  border-radius: 50rpx;
-  background:
-    radial-gradient(circle at 8% 42%, rgba(255, 126, 100, 0.2) 0, transparent 24%),
-    radial-gradient(circle at 86% 32%, rgba(232, 169, 113, 0.22) 0, transparent 24%),
-    linear-gradient(180deg, #ffe9dd 0%, #fff8f3 46%, #fffaf7 100%);
-  box-shadow: 0 24rpx 64rpx rgba(98, 65, 55, 0.16);
   margin: 0 auto;
-  padding: 28rpx 24rpx 48rpx;
-}
-
-.status-row {
-  display: flex;
-  justify-content: flex-end;
-  align-items: center;
-  gap: 14rpx;
-  height: 32rpx;
-}
-
-.signal-bars {
-  display: flex;
-  align-items: flex-end;
-  gap: 5rpx;
-  height: 18rpx;
-}
-
-.signal-bars text {
-  display: block;
-  width: 7rpx;
-  border-radius: 999rpx;
-  background: rgba(255, 255, 255, 0.92);
-}
-
-.signal-bars text:nth-child(1) {
-  height: 8rpx;
-}
-
-.signal-bars text:nth-child(2) {
-  height: 13rpx;
-}
-
-.signal-bars text:nth-child(3) {
-  height: 18rpx;
-}
-
-.battery {
-  width: 42rpx;
-  height: 18rpx;
-  border: 3rpx solid rgba(255, 255, 255, 0.92);
-  border-radius: 6rpx;
-}
-
-.battery::after {
-  display: block;
-  width: 22rpx;
-  height: 8rpx;
-  border-radius: 3rpx;
-  background: rgba(255, 255, 255, 0.92);
-  content: '';
-  margin: 2rpx 0 0 3rpx;
 }
 
 .hero {
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 34rpx 0 42rpx;
+  padding: 42rpx 0 42rpx;
 }
 
 .eyebrow {

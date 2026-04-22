@@ -4,7 +4,8 @@
       "path": "pages/today/index",
       "style": {
         "navigationBarTitleText": "今天",
-        "navigationStyle": "custom"
+        "navigationBarBackgroundColor": "#ffe9dd",
+        "navigationBarTextStyle": "black"
       }
     },
     {
