@@ -1,4 +1,7 @@
 node_modules/
+.m2/
+backend/target/
+backend/data/
 dist/
 unpackage/
 .hbuilderx/
