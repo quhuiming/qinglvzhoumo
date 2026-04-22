@@ -2,29 +2,29 @@
 
 Spring Boot 后端 MVP，用于让两个人共享愿望、回忆和每日记录。
 
-## Docker MySQL 运行
+## MySQL 运行
 
-当前默认使用 Docker MySQL。为了避免和本机 MySQL80 的 `3306` 冲突，Docker MySQL 暴露在 `3307`。
+当前默认使用你本机已有的 Docker 容器 `mysql8`，端口是 `3306`。
 
-先启动 MySQL：
+我已经在 `mysql8` 中创建了项目数据库和账号：
+
+- 数据库：`qinglvzhoumo`
+- 用户名：`qinglv`
+- 密码：`qinglvzhoumo_dev`
+- 端口：`3306`
+
+启动后端：
 
 ```bash
 cd backend
-docker compose up -d
-```
-
-再启动后端：
-
-```bash
 mvn -s maven-settings.xml spring-boot:run
 ```
 
 默认连接：
 
-- 数据库：`qinglvzhoumo`
-- 用户名：`qinglv`
-- 密码：`qinglvzhoumo_dev`
-- 端口：`3307`
+```text
+jdbc:mysql://localhost:3306/qinglvzhoumo
+```
 
 前端 H5 默认连接 Java 后端：
 
@@ -44,18 +44,9 @@ http://10.0.2.2:8080
 http://192.168.x.x:8080
 ```
 
-## 本机 MySQL80 备用
+## 初始化 SQL
 
-如果临时不用 Docker，可以覆盖环境变量改回本机 MySQL80：
-
-```bash
-set DB_URL=jdbc:mysql://localhost:3306/qinglvzhoumo?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&useSSL=false
-set DB_USER=qinglv
-set DB_PASSWORD=qinglvzhoumo_dev
-mvn -s maven-settings.xml spring-boot:run
-```
-
-本机 MySQL 初始化脚本在：
+如果换了一台机器或重新建库，可以执行：
 
 ```text
 backend/sql/init-local-mysql.sql
