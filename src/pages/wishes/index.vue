@@ -22,8 +22,8 @@
       </button>
     </view>
 
-    <view v-if="state.wishes.length" class="wish-list">
-      <view v-for="wish in state.wishes" :key="wish.id" class="wish-item soft-card" :class="{ done: wish.done }">
+    <view v-if="activeWishes.length" class="wish-list">
+      <view v-for="wish in activeWishes" :key="wish.id" class="wish-item soft-card" :class="{ done: wish.done }">
         <button class="check tap-target" hover-class="soft-hover" @tap="handleToggle(wish.id)">
           <view v-if="wish.done" class="check-mark"></view>
         </button>
@@ -44,14 +44,15 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import { onShow } from '@dcloudio/uni-app'
-import { addWish, deleteWish, loadState, toggleWish, updateWish } from '../../store/love'
+import { addWish, deleteWish, getActiveWishes, loadState, toggleWish, updateWish } from '../../store/love'
 import { formatFriendlyDate } from '../../utils/date'
 
 const state = ref(loadState())
 const wishText = ref('')
 const editingId = ref('')
+const activeWishes = computed(() => getActiveWishes(state.value))
 
 onShow(() => {
   state.value = loadState()

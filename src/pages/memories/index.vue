@@ -100,6 +100,7 @@ import {
   deleteDailyEntry,
   deleteMemory,
   getActiveDailyEntries,
+  getActiveMemories,
   loadState,
   updateMemory
 } from '../../store/love'
@@ -117,7 +118,7 @@ const form = reactive({
 })
 
 const canSubmit = computed(() => form.title.trim() && form.description.trim())
-const activeMemories = computed(() => state.value.memories.filter((item) => !item.deletedAt))
+const activeMemories = computed(() => getActiveMemories(state.value))
 const dailyEntries = computed(() => getActiveDailyEntries(state.value))
 
 onShow(() => {

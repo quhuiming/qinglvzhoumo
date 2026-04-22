@@ -29,13 +29,50 @@
       <button class="primary-button tap-target" hover-class="button-hover" @tap="handleSave">保存我们</button>
     </view>
 
+    <view class="sync-card soft-card">
+      <view class="sync-head">
+        <view>
+          <text class="sync-title">共享空间</text>
+          <text class="sync-copy">{{ syncStatusText }}</text>
+        </view>
+        <text class="sync-badge" :class="{ online: syncConfig.coupleId }">{{ syncConfig.coupleId ? '已绑定' : '未绑定' }}</text>
+      </view>
+
+      <view class="form-field">
+        <text class="field-label">后端地址</text>
+        <input v-model="apiBaseUrl" class="field-input" type="text" placeholder="http://localhost:8080" cursor-spacing="120" :adjust-position="true" />
+      </view>
+      <button class="ghost-button tap-target" hover-class="soft-hover" @tap="saveApiBaseUrl">保存后端地址</button>
+
+      <view class="invite-box">
+        <text class="invite-label">我的邀请码</text>
+        <text class="invite-code">{{ syncConfig.inviteCode || '还没有创建' }}</text>
+      </view>
+
+      <button class="primary-button tap-target" :class="{ disabled: syncing }" hover-class="button-hover" @tap="handleCreateInvite">
+        {{ syncConfig.inviteCode ? '刷新邀请码' : '创建情侣空间' }}
+      </button>
+
+      <view class="join-row">
+        <input v-model="inviteCode" class="field-input" type="text" placeholder="输入对方的邀请码" maxlength="12" cursor-spacing="120" :adjust-position="true" />
+        <button class="ghost-button tap-target join-button" :class="{ disabled: syncing || !inviteCode.trim() }" hover-class="soft-hover" @tap="handleJoinInvite">加入</button>
+      </view>
+
+      <button class="ghost-button tap-target" :class="{ disabled: syncing || !syncConfig.coupleId }" hover-class="soft-hover" @tap="handleSyncNow">
+        {{ syncing ? '同步中...' : '立即同步' }}
+      </button>
+
+      <text v-if="syncConfig.lastSyncedAt" class="sync-tip">上次同步：{{ syncConfig.lastSyncedAt }}</text>
+      <text v-if="syncConfig.lastError" class="sync-error">同步提示：{{ syncConfig.lastError }}</text>
+    </view>
+
     <view class="stats-grid">
       <view class="stat-card soft-card">
         <text class="stat-number">{{ undoneCount }}</text>
         <text class="stat-label">待完成愿望</text>
       </view>
       <view class="stat-card soft-card">
-        <text class="stat-number">{{ state.memories.length }}</text>
+        <text class="stat-number">{{ activeMemories.length }}</text>
         <text class="stat-label">段小回忆</text>
       </view>
       <view class="stat-card soft-card">
@@ -60,18 +97,41 @@
 import { computed, reactive, ref } from 'vue'
 import { onShow } from '@dcloudio/uni-app'
 import { countLoveDays } from '../../utils/date'
-import { loadState, resetState, updateProfile } from '../../store/love'
+import {
+  createCoupleInvite,
+  getActiveMemories,
+  getActiveWishes,
+  getBackendSyncConfig,
+  joinCoupleByInvite,
+  loadState,
+  resetState,
+  setBackendApiBaseUrl,
+  syncNow,
+  updateProfile
+} from '../../store/love'
 
 const state = ref(loadState())
 const form = reactive({ ...state.value.profile })
+const syncConfig = ref(getBackendSyncConfig())
+const apiBaseUrl = ref(syncConfig.value.apiBaseUrl)
+const inviteCode = ref('')
+const syncing = ref(false)
 
 const loveDays = computed(() => countLoveDays(state.value.profile.startDate))
-const undoneCount = computed(() => state.value.wishes.filter((item) => !item.done).length)
-const doneWishCount = computed(() => state.value.wishes.filter((item) => item.done).length)
+const activeWishes = computed(() => getActiveWishes(state.value))
+const activeMemories = computed(() => getActiveMemories(state.value))
+const undoneCount = computed(() => activeWishes.value.filter((item) => !item.done).length)
+const doneWishCount = computed(() => activeWishes.value.filter((item) => item.done).length)
+const syncStatusText = computed(() => {
+  if (syncConfig.value.coupleId) return '本机内容会同步到 Java 后端，另一台设备加入后可共享查看。'
+  return '先创建情侣空间，或输入对方的邀请码加入。'
+})
 
 onShow(() => {
   state.value = loadState()
   Object.assign(form, state.value.profile)
+  syncConfig.value = getBackendSyncConfig()
+  apiBaseUrl.value = syncConfig.value.apiBaseUrl
 })
 
 function handleDateChange(event) {
@@ -90,6 +150,63 @@ function handleSave() {
     initialized: true
   })
   uni.showToast({ title: '保存好了', icon: 'none' })
+}
+
+function refreshSyncConfig() {
+  syncConfig.value = getBackendSyncConfig()
+  apiBaseUrl.value = syncConfig.value.apiBaseUrl
+}
+
+function saveApiBaseUrl() {
+  if (!apiBaseUrl.value.trim()) {
+    uni.showToast({ title: '先填后端地址', icon: 'none' })
+    return
+  }
+  syncConfig.value = setBackendApiBaseUrl(apiBaseUrl.value)
+  uni.showToast({ title: '已保存后端地址', icon: 'none' })
+}
+
+async function runSyncTask(task, successTitle) {
+  if (syncing.value) return
+  syncing.value = true
+  try {
+    await task()
+    state.value = loadState()
+    refreshSyncConfig()
+    uni.showToast({ title: successTitle, icon: 'none' })
+  } catch (error) {
+    refreshSyncConfig()
+    uni.showModal({
+      title: '连接后端失败',
+      content: error?.message || '请确认 Java 后端已经启动',
+      showCancel: false
+    })
+  } finally {
+    syncing.value = false
+  }
+}
+
+function handleCreateInvite() {
+  saveApiBaseUrl()
+  runSyncTask(() => createCoupleInvite(), '已创建情侣空间')
+}
+
+function handleJoinInvite() {
+  if (!inviteCode.value.trim()) {
+    uni.showToast({ title: '先输入邀请码', icon: 'none' })
+    return
+  }
+  saveApiBaseUrl()
+  runSyncTask(() => joinCoupleByInvite(inviteCode.value), '已加入情侣空间')
+}
+
+function handleSyncNow() {
+  if (!syncConfig.value.coupleId) {
+    uni.showToast({ title: '先绑定情侣空间', icon: 'none' })
+    return
+  }
+  saveApiBaseUrl()
+  runSyncTask(() => syncNow({ full: true }), '同步完成')
 }
 
 function confirmReset() {
@@ -187,6 +304,96 @@ function confirmReset() {
 
 .profile-form {
   padding: 28rpx;
+}
+
+.sync-card {
+  margin-top: 26rpx;
+  padding: 28rpx;
+}
+
+.sync-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18rpx;
+  margin-bottom: 24rpx;
+}
+
+.sync-title {
+  display: block;
+  color: #553a35;
+  font-size: 30rpx;
+  font-weight: 900;
+}
+
+.sync-copy,
+.sync-tip,
+.sync-error {
+  display: block;
+  margin-top: 8rpx;
+  color: #765a52;
+  font-size: 24rpx;
+  line-height: 1.45;
+}
+
+.sync-badge {
+  flex: 0 0 auto;
+  min-height: 46rpx;
+  border-radius: 999rpx;
+  background: #fff0e9;
+  color: #c95b49;
+  font-size: 22rpx;
+  font-weight: 900;
+  line-height: 46rpx;
+  padding: 0 18rpx;
+}
+
+.sync-badge.online {
+  background: #ffe2d4;
+  color: #d75d4b;
+}
+
+.invite-box {
+  border: 1rpx dashed rgba(215, 93, 75, 0.26);
+  border-radius: 22rpx;
+  background: #fff8f3;
+  margin: 22rpx 0;
+  padding: 22rpx;
+}
+
+.invite-label {
+  display: block;
+  color: #8a645a;
+  font-size: 23rpx;
+  font-weight: 800;
+}
+
+.invite-code {
+  display: block;
+  margin-top: 10rpx;
+  color: #553a35;
+  font-size: 42rpx;
+  font-weight: 900;
+  letter-spacing: 4rpx;
+}
+
+.join-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 132rpx;
+  gap: 16rpx;
+  margin: 18rpx 0;
+}
+
+.join-button {
+  min-height: 88rpx;
+}
+
+.sync-error {
+  color: #a7483d;
+}
+
+.disabled {
+  opacity: 0.5;
 }
 
 .picker-field {

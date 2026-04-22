@@ -1,7 +1,18 @@
 import { getNowString, getTodayString } from '../utils/date'
+import {
+  createInvite,
+  getSyncConfig,
+  joinInvite,
+  pullSync,
+  pushSync,
+  saveSyncConfig
+} from '../utils/backend'
 
 const STORAGE_KEY = 'qinglvzhoumo.state.v2'
 const LEGACY_STORAGE_KEY = 'qinglvzhoumo.state.v1'
+
+let syncTimer = null
+let syncRunning = false
 
 const defaultPlans = [
   { id: 'plan-1', title: '一起散步 20 分钟', detail: '不看手机，只聊今天最轻松的一件小事。', doneCount: 0 },
@@ -215,6 +226,158 @@ function rolloverToday(state) {
   return state
 }
 
+function compareUpdatedAt(a, b) {
+  return String(a || '').localeCompare(String(b || ''))
+}
+
+function activeList(list) {
+  return Array.isArray(list) ? list.filter((item) => !item.deletedAt) : []
+}
+
+function toSyncItems(state) {
+  const items = [
+    {
+      type: 'profile',
+      clientId: state.profile.id || 'profile-main',
+      payload: state.profile,
+      version: state.profile.version || 1,
+      updatedAt: state.profile.updatedAt || getNowString(),
+      deletedAt: state.profile.deletedAt || ''
+    }
+  ]
+  ;['wishes', 'memories', 'dailyEntries'].forEach((key) => {
+    const type = key === 'dailyEntries' ? 'dailyEntry' : key.slice(0, -1)
+    ;(state[key] || []).forEach((item) => {
+      items.push({
+        type,
+        clientId: item.id,
+        payload: item,
+        version: item.version || 1,
+        updatedAt: item.updatedAt || item.createdAt || getNowString(),
+        deletedAt: item.deletedAt || ''
+      })
+    })
+  })
+  return items
+}
+
+function mergeItemList(localList, remoteItem, normalize) {
+  const payload = remoteItem.payload || {}
+  const remote = normalize({
+    ...payload,
+    id: remoteItem.clientId || payload.id,
+    version: remoteItem.version || payload.version || 1,
+    updatedAt: remoteItem.updatedAt || payload.updatedAt || getNowString(),
+    deletedAt: remoteItem.deletedAt || payload.deletedAt || ''
+  })
+  const index = localList.findIndex((item) => item.id === remote.id)
+  if (index < 0) return [remote, ...localList]
+  const local = localList[index]
+  if (compareUpdatedAt(remote.updatedAt, local.updatedAt) < 0) return localList
+  return localList.map((item) => (item.id === remote.id ? remote : item))
+}
+
+function mergeRemoteItems(state, items) {
+  ;(items || []).forEach((item) => {
+    if (item.type === 'profile') {
+      const remote = withMeta({
+        ...state.profile,
+        ...(item.payload || {}),
+        id: item.clientId || 'profile-main',
+        version: item.version || 1,
+        updatedAt: item.updatedAt || item.payload?.updatedAt || getNowString(),
+        deletedAt: item.deletedAt || item.payload?.deletedAt || ''
+      }, 'profile-main')
+      if (compareUpdatedAt(remote.updatedAt, state.profile.updatedAt) >= 0) {
+        state.profile = remote
+      }
+      return
+    }
+    if (item.type === 'wish') {
+      state.wishes = mergeItemList(state.wishes, item, (value) => withMeta(value, value.id))
+      return
+    }
+    if (item.type === 'memory') {
+      state.memories = mergeItemList(state.memories, item, (value) => withMeta(value, value.id))
+      return
+    }
+    if (item.type === 'dailyEntry') {
+      state.dailyEntries = mergeItemList(state.dailyEntries, item, normalizeDailyEntry)
+    }
+  })
+  return normalizeState(state)
+}
+
+function markSyncError(error) {
+  saveSyncConfig({ lastError: error?.message || String(error || 'sync failed') })
+}
+
+export async function syncNow(options = {}) {
+  const config = getSyncConfig()
+  if (!config.enabled || !config.token || !config.coupleId || syncRunning) return loadState()
+  syncRunning = true
+  try {
+    let state = loadState()
+    const pulled = await pullSync(options.full ? '' : config.lastPulledAt)
+    if (pulled?.items?.length) {
+      state = mergeRemoteItems(state, pulled.items)
+      saveState(state)
+    }
+    const pushed = await pushSync(toSyncItems(state))
+    if (pushed?.items?.length) {
+      state = mergeRemoteItems(loadState(), pushed.items)
+      saveState(state)
+    }
+    saveSyncConfig({
+      lastPulledAt: pushed?.serverTime || pulled?.serverTime || getNowString(),
+      lastSyncedAt: getNowString(),
+      lastError: ''
+    })
+    return loadState()
+  } catch (error) {
+    markSyncError(error)
+    if (!options.silent) throw error
+    return loadState()
+  } finally {
+    syncRunning = false
+  }
+}
+
+export function queueSync() {
+  const config = getSyncConfig()
+  if (!config.enabled || !config.token || !config.coupleId) return
+  if (syncTimer) clearTimeout(syncTimer)
+  syncTimer = setTimeout(() => {
+    syncNow({ silent: true }).catch(() => {})
+  }, 500)
+}
+
+export function getBackendSyncConfig() {
+  return getSyncConfig()
+}
+
+export function setBackendApiBaseUrl(apiBaseUrl) {
+  return saveSyncConfig({ apiBaseUrl: apiBaseUrl.trim(), lastError: '' })
+}
+
+export async function createCoupleInvite() {
+  const state = loadState()
+  const config = await createInvite(state.profile.me)
+  await syncNow({ full: true, silent: true })
+  return config
+}
+
+export async function joinCoupleByInvite(inviteCode) {
+  const state = loadState()
+  const config = await joinInvite(inviteCode, state.profile.me)
+  await syncNow({ full: true, silent: true })
+  return config
+}
+
+export function initializeBackendSync() {
+  queueSync()
+}
+
 export function loadState() {
   const saved = uni.getStorageSync(STORAGE_KEY) || uni.getStorageSync(LEGACY_STORAGE_KEY)
   const state = rolloverToday(normalizeState(saved))
@@ -230,6 +393,7 @@ export function updateProfile(profile) {
   const state = loadState()
   state.profile = touch({ ...state.profile, ...profile })
   saveState(state)
+  queueSync()
   return state
 }
 
@@ -256,6 +420,7 @@ export function drawPlan() {
     planDone: state.today.completedPlanIds.includes(next.id)
   })
   saveState(state)
+  queueSync()
   return { state, plan: next }
 }
 
@@ -270,6 +435,7 @@ export function saveDailyAnswer(answer) {
     answeredAt: state.today.answeredAt
   })
   saveState(state)
+  queueSync()
   return state
 }
 
@@ -312,6 +478,7 @@ export function toggleTodayPlanDone(planId) {
     })
   }
   saveState(state)
+  queueSync()
   return state
 }
 
@@ -324,6 +491,7 @@ export function addWish(title) {
     createdAt: getTodayString()
   }))
   saveState(state)
+  queueSync()
   return state
 }
 
@@ -333,13 +501,17 @@ export function updateWish(id, title) {
     wish.id === id ? touch({ ...wish, title: title.trim() }) : wish
   ))
   saveState(state)
+  queueSync()
   return state
 }
 
 export function deleteWish(id) {
   const state = loadState()
-  state.wishes = state.wishes.filter((wish) => wish.id !== id)
+  state.wishes = state.wishes.map((wish) => (
+    wish.id === id ? touch({ ...wish, deletedAt: getNowString() }) : wish
+  ))
   saveState(state)
+  queueSync()
   return state
 }
 
@@ -349,6 +521,7 @@ export function toggleWish(id) {
     wish.id === id ? touch({ ...wish, done: !wish.done }) : wish
   ))
   saveState(state)
+  queueSync()
   return state
 }
 
@@ -363,6 +536,7 @@ export function addMemory(memory) {
     color: memory.color || '#f9b38d'
   }))
   saveState(state)
+  queueSync()
   return state
 }
 
@@ -381,13 +555,17 @@ export function updateMemory(id, memory) {
       : item
   ))
   saveState(state)
+  queueSync()
   return state
 }
 
 export function deleteMemory(id) {
   const state = loadState()
-  state.memories = state.memories.filter((memory) => memory.id !== id)
+  state.memories = state.memories.map((memory) => (
+    memory.id === id ? touch({ ...memory, deletedAt: getNowString() }) : memory
+  ))
   saveState(state)
+  queueSync()
   return state
 }
 
@@ -397,6 +575,7 @@ export function deleteDailyEntry(id) {
     entry.id === id ? touch({ ...entry, deletedAt: getNowString() }) : entry
   ))
   saveState(state)
+  queueSync()
   return state
 }
 
@@ -410,4 +589,12 @@ export function getActiveDailyEntries(state) {
 
 export function getLatestDailyEntry(state) {
   return activeDailyEntries(state)[0]
+}
+
+export function getActiveWishes(state) {
+  return activeList(state.wishes)
+}
+
+export function getActiveMemories(state) {
+  return activeList(state.memories)
 }

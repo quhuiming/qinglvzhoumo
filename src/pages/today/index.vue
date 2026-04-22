@@ -122,6 +122,8 @@ import { onShow } from '@dcloudio/uni-app'
 import { countLoveDays, formatShortTime } from '../../utils/date'
 import {
   drawPlan,
+  getActiveMemories,
+  getActiveWishes,
   getDailyQuestion,
   getLatestDailyEntry,
   loadState,
@@ -139,10 +141,10 @@ const isPlanDone = computed(() => currentPlan.value && state.value.today.complet
 const hasAnswer = computed(() => Boolean(state.value.today.answer.trim()))
 const canSaveAnswer = computed(() => Boolean(answerDraft.value.trim()) && answerDraft.value.trim() !== state.value.today.answer)
 const isTodayComplete = computed(() => hasAnswer.value && isPlanDone.value)
-const pendingWishes = computed(() => state.value.wishes.filter((item) => !item.done && !item.deletedAt))
+const pendingWishes = computed(() => getActiveWishes(state.value).filter((item) => !item.done))
 const pendingWishCount = computed(() => pendingWishes.value.length)
 const nextWish = computed(() => pendingWishes.value[0])
-const latestMemory = computed(() => state.value.memories.find((item) => !item.deletedAt))
+const latestMemory = computed(() => getActiveMemories(state.value)[0])
 const latestDailyEntry = computed(() => getLatestDailyEntry(state.value))
 const answerTimeText = computed(() => formatShortTime(state.value.today.answeredAt))
 const progressTitle = computed(() => {
