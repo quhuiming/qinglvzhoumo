@@ -71,13 +71,20 @@
             <view class="card-icon memory-icon" aria-hidden="true"></view>
             <text>最近回忆</text>
           </view>
-          <view class="memory-thumb" aria-hidden="true">
+          <image v-if="latestMemory && latestMemory.image" class="memory-thumb memory-image" :src="latestMemory.image" mode="aspectFill" />
+          <view v-else class="memory-thumb" aria-hidden="true">
             <view class="photo-sun"></view>
             <view class="photo-hill hill-a"></view>
             <view class="photo-hill hill-b"></view>
           </view>
           <text class="memory-title">{{ latestMemory ? latestMemory.title : '记录一次小约会' }}</text>
         </view>
+      </view>
+
+      <view v-if="latestHistory" class="history-card soft-card">
+        <text class="history-label">最近完成</text>
+        <text class="history-title">{{ latestHistory.title }}</text>
+        <text class="history-date">{{ latestHistory.completedAt }}</text>
       </view>
     </view>
   </view>
@@ -99,6 +106,7 @@ const pendingWishes = computed(() => state.value.wishes.filter((item) => !item.d
 const pendingWishCount = computed(() => pendingWishes.value.length)
 const nextWish = computed(() => pendingWishes.value[0])
 const latestMemory = computed(() => state.value.memories[0])
+const latestHistory = computed(() => state.value.planHistory[0])
 
 onShow(() => {
   state.value = loadState()
@@ -570,6 +578,11 @@ function handleToggleDone() {
   background: linear-gradient(135deg, #8d5b45 0%, #f1b37e 58%, #ff8069 100%);
 }
 
+.memory-image {
+  display: block;
+  width: 100%;
+}
+
 .photo-sun {
   position: absolute;
   right: 28rpx;
@@ -610,6 +623,31 @@ function handleToggleDone() {
   font-weight: 800;
   line-height: 48rpx;
   padding: 0 16rpx;
+}
+
+.history-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8rpx;
+  margin-top: 24rpx;
+  padding: 24rpx;
+}
+
+.history-label {
+  color: #d06451;
+  font-size: 22rpx;
+  font-weight: 900;
+}
+
+.history-title {
+  color: #5d3e38;
+  font-size: 29rpx;
+  font-weight: 900;
+}
+
+.history-date {
+  color: #806257;
+  font-size: 23rpx;
 }
 
 @media screen and (max-width: 360px) {

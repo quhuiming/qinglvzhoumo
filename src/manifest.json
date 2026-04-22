@@ -1,9 +1,9 @@
 {
   "name": "情侣周末",
-  "appid": "__UNI__QINGLVZHOUMO",
-  "description": "一个温柔日常的情侣升温小应用",
-  "versionName": "0.1.0",
-  "versionCode": "100",
+  "appid": "__UNI__QINGLVZHOUMO_LOCAL",
+  "description": "一个温柔日常的情侣升温单机应用",
+  "versionName": "0.2.0",
+  "versionCode": "200",
   "transformPx": false,
   "app-plus": {
     "usingComponents": true,
@@ -16,9 +16,16 @@
       "delay": 0
     },
     "modules": {},
+    "privacy": {
+      "prompt": "应用仅使用本机存储保存昵称、愿望、回忆和本地选择的照片，不上传云端。"
+    },
     "distribute": {
       "android": {
-        "permissions": []
+        "permissions": [
+          "<uses-permission android:name=\"android.permission.READ_MEDIA_IMAGES\"/>",
+          "<uses-permission android:name=\"android.permission.READ_EXTERNAL_STORAGE\"/>",
+          "<uses-permission android:name=\"android.permission.CAMERA\"/>"
+        ]
       },
       "ios": {}
     }

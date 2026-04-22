@@ -7,20 +7,33 @@
 
     <view class="input-card soft-card">
       <view class="wish-input-wrap">
-        <text class="field-label">新的共同愿望</text>
-        <input v-model="newWish" class="field-input" placeholder="例如：周五晚上去散步" confirm-type="done" @confirm="handleAdd" />
+        <text class="field-label">{{ editingId ? '编辑愿望' : '新的共同愿望' }}</text>
+        <input v-model="wishText" class="field-input" placeholder="例如：周五晚上去散步" confirm-type="done" @confirm="handleSubmit" />
       </view>
-      <button class="primary-button tap-target" hover-class="button-hover" @tap="handleAdd">加入</button>
+      <button class="primary-button tap-target" :class="{ disabled: !wishText.trim() }" hover-class="button-hover" @tap="handleSubmit">
+        {{ editingId ? '保存' : '加入' }}
+      </button>
+      <button v-if="editingId" class="ghost-button tap-target cancel-button" hover-class="soft-hover" @tap="cancelEdit">取消编辑</button>
+    </view>
+
+    <view class="template-row">
+      <button v-for="template in state.wishTemplates" :key="template" class="template-chip tap-target" hover-class="soft-hover" @tap="useTemplate(template)">
+        {{ template }}
+      </button>
     </view>
 
     <view v-if="state.wishes.length" class="wish-list">
-      <view v-for="wish in state.wishes" :key="wish.id" class="wish-item soft-card tap-target" :class="{ done: wish.done }" hover-class="soft-hover" @tap="handleToggle(wish.id)">
-        <view class="check" aria-hidden="true">
+      <view v-for="wish in state.wishes" :key="wish.id" class="wish-item soft-card" :class="{ done: wish.done }">
+        <button class="check tap-target" hover-class="soft-hover" @tap="handleToggle(wish.id)">
           <view v-if="wish.done" class="check-mark"></view>
-        </view>
+        </button>
         <view class="wish-body">
           <text class="wish-title">{{ wish.title }}</text>
           <text class="wish-date">{{ formatFriendlyDate(wish.createdAt) }}</text>
+          <view class="wish-actions">
+            <button class="text-action" @tap="startEdit(wish)">编辑</button>
+            <button class="text-action danger" @tap="confirmDelete(wish)">删除</button>
+          </view>
         </view>
         <text class="wish-status">{{ wish.done ? '完成' : '待完成' }}</text>
       </view>
@@ -33,28 +46,58 @@
 <script setup>
 import { ref } from 'vue'
 import { onShow } from '@dcloudio/uni-app'
-import { addWish, loadState, toggleWish } from '../../store/love'
+import { addWish, deleteWish, loadState, toggleWish, updateWish } from '../../store/love'
 import { formatFriendlyDate } from '../../utils/date'
 
 const state = ref(loadState())
-const newWish = ref('')
+const wishText = ref('')
+const editingId = ref('')
 
 onShow(() => {
   state.value = loadState()
 })
 
-function handleAdd() {
-  const title = newWish.value.trim()
+function handleSubmit() {
+  const title = wishText.value.trim()
   if (!title) {
     uni.showToast({ title: '先写下一个小愿望', icon: 'none' })
     return
   }
-  state.value = addWish(title)
-  newWish.value = ''
+  state.value = editingId.value ? updateWish(editingId.value, title) : addWish(title)
+  wishText.value = ''
+  editingId.value = ''
+}
+
+function useTemplate(template) {
+  wishText.value = template
+}
+
+function startEdit(wish) {
+  editingId.value = wish.id
+  wishText.value = wish.title
+}
+
+function cancelEdit() {
+  editingId.value = ''
+  wishText.value = ''
 }
 
 function handleToggle(id) {
   state.value = toggleWish(id)
+}
+
+function confirmDelete(wish) {
+  uni.showModal({
+    title: '删除愿望',
+    content: `确定删除“${wish.title}”吗？`,
+    confirmText: '删除',
+    confirmColor: '#d75d4b',
+    success: (res) => {
+      if (!res.confirm) return
+      state.value = deleteWish(wish.id)
+      if (editingId.value === wish.id) cancelEdit()
+    }
+  })
 }
 </script>
 
@@ -78,6 +121,28 @@ function handleToggle(id) {
   font-size: 26rpx;
 }
 
+.cancel-button {
+  grid-column: 1 / -1;
+}
+
+.template-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14rpx;
+  margin-top: 22rpx;
+}
+
+.template-chip {
+  min-height: 58rpx;
+  border: 1rpx solid rgba(215, 93, 75, 0.18);
+  border-radius: 999rpx;
+  background: rgba(255, 248, 243, 0.86);
+  color: #8c5f55;
+  font-size: 23rpx;
+  font-weight: 800;
+  padding: 0 22rpx;
+}
+
 .wish-list {
   display: flex;
   flex-direction: column;
@@ -87,9 +152,9 @@ function handleToggle(id) {
 
 .wish-item {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 18rpx;
-  min-height: 112rpx;
+  min-height: 124rpx;
   padding: 22rpx;
   border-color: rgba(169, 103, 82, 0.14);
 }
@@ -98,13 +163,14 @@ function handleToggle(id) {
   display: flex;
   align-items: center;
   justify-content: center;
-  flex: 0 0 46rpx;
-  width: 46rpx;
-  height: 46rpx;
+  flex: 0 0 48rpx;
+  width: 48rpx;
+  height: 48rpx;
   border: 3rpx solid #ff927f;
-  border-radius: 14rpx;
+  border-radius: 15rpx;
   color: #fff;
   background: #fff7f2;
+  margin-top: 2rpx;
 }
 
 .check-mark {
@@ -135,7 +201,24 @@ function handleToggle(id) {
   font-size: 23rpx;
 }
 
+.wish-actions {
+  display: flex;
+  gap: 20rpx;
+  margin-top: 6rpx;
+}
+
+.text-action {
+  color: #c95b49;
+  font-size: 24rpx;
+  font-weight: 800;
+}
+
+.text-action.danger {
+  color: #9f4c40;
+}
+
 .wish-status {
+  flex: 0 0 auto;
   color: #c95b49;
   font-size: 23rpx;
   font-weight: 800;
@@ -151,6 +234,10 @@ function handleToggle(id) {
 
 .wish-item.done .wish-title {
   text-decoration: line-through;
+}
+
+.disabled {
+  opacity: 0.5;
 }
 
 @media screen and (max-width: 360px) {

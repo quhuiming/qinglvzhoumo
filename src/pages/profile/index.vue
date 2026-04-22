@@ -1,5 +1,10 @@
 <template>
   <view class="app-page">
+    <view v-if="!state.profile.initialized" class="guide-card soft-card">
+      <text class="guide-title">先把你们写进来</text>
+      <text class="guide-copy">保存后，首页会用你们的昵称和恋爱天数开始记录。</text>
+    </view>
+
     <view class="profile-hero soft-card">
       <view class="heart" aria-hidden="true"></view>
       <text class="title">{{ state.profile.me }} & {{ state.profile.partner }}</text>
@@ -17,7 +22,9 @@
       </view>
       <view class="form-field">
         <text class="field-label">恋爱开始日期</text>
-        <input v-model="form.startDate" class="field-input" placeholder="YYYY-MM-DD" />
+        <picker mode="date" :value="form.startDate" @change="handleDateChange">
+          <view class="picker-field">{{ form.startDate }}</view>
+        </picker>
       </view>
       <button class="primary-button tap-target" hover-class="button-hover" @tap="handleSave">保存我们</button>
     </view>
@@ -31,6 +38,20 @@
         <text class="stat-number">{{ state.memories.length }}</text>
         <text class="stat-label">段小回忆</text>
       </view>
+      <view class="stat-card soft-card">
+        <text class="stat-number">{{ state.planHistory.length }}</text>
+        <text class="stat-label">完成小计划</text>
+      </view>
+      <view class="stat-card soft-card">
+        <text class="stat-number">{{ doneWishCount }}</text>
+        <text class="stat-label">完成愿望</text>
+      </view>
+    </view>
+
+    <view class="danger-zone soft-card">
+      <text class="danger-title">本地数据</text>
+      <text class="danger-copy">所有内容只保存在这台设备。重置后会恢复默认示例数据。</text>
+      <button class="ghost-button tap-target" hover-class="soft-hover" @tap="confirmReset">重置本地数据</button>
     </view>
   </view>
 </template>
@@ -39,18 +60,23 @@
 import { computed, reactive, ref } from 'vue'
 import { onShow } from '@dcloudio/uni-app'
 import { countLoveDays } from '../../utils/date'
-import { loadState, updateProfile } from '../../store/love'
+import { loadState, resetState, updateProfile } from '../../store/love'
 
 const state = ref(loadState())
 const form = reactive({ ...state.value.profile })
 
 const loveDays = computed(() => countLoveDays(state.value.profile.startDate))
 const undoneCount = computed(() => state.value.wishes.filter((item) => !item.done).length)
+const doneWishCount = computed(() => state.value.wishes.filter((item) => item.done).length)
 
 onShow(() => {
   state.value = loadState()
   Object.assign(form, state.value.profile)
 })
+
+function handleDateChange(event) {
+  form.startDate = event.detail.value
+}
 
 function handleSave() {
   if (!form.me.trim() || !form.partner.trim()) {
@@ -60,13 +86,49 @@ function handleSave() {
   state.value = updateProfile({
     me: form.me.trim(),
     partner: form.partner.trim(),
-    startDate: form.startDate.trim()
+    startDate: form.startDate.trim(),
+    initialized: true
   })
   uni.showToast({ title: '保存好了', icon: 'none' })
+}
+
+function confirmReset() {
+  uni.showModal({
+    title: '重置本地数据',
+    content: '会清空你新增的愿望、回忆和计划历史，确定继续吗？',
+    confirmText: '重置',
+    confirmColor: '#d75d4b',
+    success: (res) => {
+      if (!res.confirm) return
+      state.value = resetState()
+      Object.assign(form, state.value.profile)
+      uni.showToast({ title: '已恢复默认', icon: 'none' })
+    }
+  })
 }
 </script>
 
 <style scoped>
+.guide-card {
+  margin-bottom: 24rpx;
+  padding: 26rpx;
+}
+
+.guide-title {
+  display: block;
+  color: #553a35;
+  font-size: 31rpx;
+  font-weight: 900;
+}
+
+.guide-copy {
+  display: block;
+  margin-top: 10rpx;
+  color: #765a52;
+  font-size: 25rpx;
+  line-height: 1.55;
+}
+
 .profile-hero {
   display: flex;
   align-items: center;
@@ -127,6 +189,17 @@ function handleSave() {
   padding: 28rpx;
 }
 
+.picker-field {
+  width: 100%;
+  border: 1rpx solid rgba(158, 98, 78, 0.2);
+  border-radius: 20rpx;
+  background: rgba(255, 250, 246, 0.96);
+  color: #4f3732;
+  font-size: 28rpx;
+  line-height: 1.4;
+  padding: 22rpx 24rpx;
+}
+
 .stats-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -154,5 +227,25 @@ function handleSave() {
   color: #765a52;
   font-size: 24rpx;
   font-weight: 800;
+}
+
+.danger-zone {
+  margin-top: 26rpx;
+  padding: 28rpx;
+}
+
+.danger-title {
+  display: block;
+  color: #553a35;
+  font-size: 30rpx;
+  font-weight: 900;
+}
+
+.danger-copy {
+  display: block;
+  color: #765a52;
+  font-size: 25rpx;
+  line-height: 1.55;
+  margin: 12rpx 0 22rpx;
 }
 </style>

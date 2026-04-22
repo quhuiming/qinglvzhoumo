@@ -1,0 +1,8 @@
+<svg width="1080" height="1920" viewBox="0 0 1080 1920" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1080" height="1920" fill="#FFF7F1"/>
+  <circle cx="166" cy="286" r="210" fill="#FFE1D4"/>
+  <circle cx="918" cy="1504" r="286" fill="#FFD1BF"/>
+  <path d="M540 1020C415 910 304 812 304 692C304 610 362 548 440 548C487 548 525 570 540 604C555 570 593 548 640 548C718 548 776 610 776 692C776 812 665 910 540 1020Z" fill="#F45B45"/>
+  <text x="540" y="1130" text-anchor="middle" font-family="Arial, sans-serif" font-size="70" font-weight="700" fill="#553A35">情侣周末</text>
+  <text x="540" y="1208" text-anchor="middle" font-family="Arial, sans-serif" font-size="34" fill="#7D5F56">把日常慢慢过热一点</text>
+</svg>
