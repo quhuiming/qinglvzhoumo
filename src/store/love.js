@@ -357,7 +357,7 @@ export function getBackendSyncConfig() {
 }
 
 export function setBackendApiBaseUrl(apiBaseUrl) {
-  return saveSyncConfig({ apiBaseUrl: apiBaseUrl.trim(), lastError: '' })
+  return saveSyncConfig({ apiBaseUrl: apiBaseUrl.trim() || undefined, lastError: '' })
 }
 
 export async function createCoupleInvite() {

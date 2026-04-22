@@ -2,7 +2,7 @@ const SYNC_CONFIG_KEY = 'qinglvzhoumo.sync.config.v1'
 const DEVICE_ID_KEY = 'qinglvzhoumo.device.id'
 
 function defaultApiBaseUrl() {
-  let url = 'http://localhost:8080'
+  let url = '/api'
   // #ifdef APP-PLUS
   url = 'http://10.0.2.2:8080'
   // #endif
@@ -24,8 +24,9 @@ export function getDeviceId() {
 
 export function getSyncConfig() {
   const saved = uni.getStorageSync(SYNC_CONFIG_KEY) || {}
+  const apiBaseUrl = saved.apiBaseUrl || defaultApiBaseUrl()
   return {
-    apiBaseUrl: saved.apiBaseUrl || defaultApiBaseUrl(),
+    apiBaseUrl,
     token: saved.token || '',
     userId: saved.userId || '',
     coupleId: saved.coupleId || '',
@@ -57,7 +58,9 @@ export function requestBackend(path, options = {}) {
   }
   return new Promise((resolve, reject) => {
     uni.request({
-      url: `${baseUrl}${path}`,
+      url: baseUrl.endsWith('/api') && path.startsWith('/api/')
+        ? `${baseUrl}${path.slice(4)}`
+        : `${baseUrl}${path}`,
       method: options.method || 'GET',
       data: options.data,
       header: {
