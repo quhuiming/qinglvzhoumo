@@ -40,7 +40,7 @@
     <view class="memory-form soft-card">
       <view class="form-field">
         <text class="field-label">标题</text>
-        <input v-model="form.title" class="field-input" placeholder="例如：昨日的甜品约会" />
+        <input v-model="form.title" class="field-input" type="text" placeholder="例如：昨日的甜品约会" cursor-spacing="120" :adjust-position="true" />
       </view>
       <view class="form-field">
         <text class="field-label">日期</text>
@@ -50,7 +50,7 @@
       </view>
       <view class="form-field">
         <text class="field-label">记录</text>
-        <textarea v-model="form.description" class="field-textarea" placeholder="写下一点当时的心情" />
+        <textarea v-model="form.description" class="field-textarea" placeholder="写下一点当时的心情" cursor-spacing="140" :adjust-position="true" :show-confirm-bar="false" />
       </view>
       <view class="form-field">
         <text class="field-label">照片</text>

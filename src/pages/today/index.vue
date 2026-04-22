@@ -39,7 +39,9 @@
           class="answer-input"
           maxlength="160"
           placeholder="写下今天想告诉对方的话"
-          auto-height
+          cursor-spacing="140"
+          :adjust-position="true"
+          :show-confirm-bar="false"
         />
         <view class="answer-actions">
           <text class="answer-meta">{{ state.today.answer ? `已保存 ${answerTimeText}` : `${answerDraft.length}/160` }}</text>
@@ -361,7 +363,11 @@ function goMemories() {
 }
 
 .answer-input {
+  display: block;
+  position: relative;
+  z-index: 2;
   width: 100%;
+  height: 156rpx;
   min-height: 142rpx;
   border: 1rpx solid rgba(158, 98, 78, 0.18);
   border-radius: 22rpx;

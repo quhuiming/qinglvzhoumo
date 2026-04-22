@@ -8,7 +8,7 @@
     <view class="input-card soft-card">
       <view class="wish-input-wrap">
         <text class="field-label">{{ editingId ? '编辑愿望' : '新的共同愿望' }}</text>
-        <input v-model="wishText" class="field-input" placeholder="例如：周五晚上去散步" confirm-type="done" @confirm="handleSubmit" />
+        <input v-model="wishText" class="field-input" type="text" placeholder="例如：周五晚上去散步" confirm-type="done" cursor-spacing="120" :adjust-position="true" @confirm="handleSubmit" />
       </view>
       <button class="primary-button tap-target" :class="{ disabled: !wishText.trim() }" hover-class="button-hover" @tap="handleSubmit">
         {{ editingId ? '保存' : '加入' }}

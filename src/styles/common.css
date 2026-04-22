@@ -33,6 +33,10 @@ input,
 textarea {
   color: #5f433d;
   font: inherit;
+  position: relative;
+  z-index: 2;
+  user-select: text;
+  -webkit-user-select: text;
 }
 
 .app-page {
@@ -109,6 +113,7 @@ textarea {
 
 .field-input,
 .field-textarea {
+  display: block;
   width: 100%;
   border: 1rpx solid rgba(158, 98, 78, 0.2);
   border-radius: 20rpx;

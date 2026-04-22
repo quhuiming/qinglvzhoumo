@@ -14,11 +14,11 @@
     <view class="profile-form soft-card">
       <view class="form-field">
         <text class="field-label">我的昵称</text>
-        <input v-model="form.me" class="field-input" placeholder="我的昵称" />
+        <input v-model="form.me" class="field-input" type="text" placeholder="我的昵称" cursor-spacing="120" :adjust-position="true" />
       </view>
       <view class="form-field">
         <text class="field-label">对方昵称</text>
-        <input v-model="form.partner" class="field-input" placeholder="对方昵称" />
+        <input v-model="form.partner" class="field-input" type="text" placeholder="对方昵称" cursor-spacing="120" :adjust-position="true" />
       </view>
       <view class="form-field">
         <text class="field-label">恋爱开始日期</text>
