@@ -22,12 +22,12 @@ mvn -s maven-settings.xml spring-boot:run
 - 数据库：`qinglvzhoumo`
 - 用户名：`qinglv`
 - 密码：`qinglvzhoumo_dev`
-- 端口：`3306`
+- 端口：`3307`，避免和本机已安装的 MySQL80 默认端口冲突
 
 如需连接其他 MySQL，可覆盖环境变量：
 
 ```bash
-set DB_URL=jdbc:mysql://localhost:3306/qinglvzhoumo?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&useSSL=false
+set DB_URL=jdbc:mysql://localhost:3307/qinglvzhoumo?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&useSSL=false
 set DB_USER=qinglv
 set DB_PASSWORD=qinglvzhoumo_dev
 mvn -s maven-settings.xml spring-boot:run
