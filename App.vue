@@ -10,5 +10,5 @@ export default {
 </script>
 
 <style>
-@import './src/styles/common.css';
+@import './styles/common.css';
 </style>
