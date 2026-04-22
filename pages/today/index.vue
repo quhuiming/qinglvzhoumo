@@ -13,6 +13,42 @@
         </view>
       </view>
 
+      <view class="progress-card soft-card">
+        <view>
+          <text class="progress-label">今日陪伴</text>
+          <text class="progress-title">{{ progressTitle }}</text>
+        </view>
+        <view class="progress-steps">
+          <view class="step" :class="{ done: hasAnswer }">
+            <view class="step-dot"></view>
+            <text>回答</text>
+          </view>
+          <view class="step-line" :class="{ done: isPlanDone }"></view>
+          <view class="step" :class="{ done: isPlanDone }">
+            <view class="step-dot"></view>
+            <text>计划</text>
+          </view>
+        </view>
+      </view>
+
+      <view class="question-card soft-card">
+        <text class="card-kicker">今日问题</text>
+        <text class="question-text">“{{ dailyQuestion }}”</text>
+        <textarea
+          v-model="answerDraft"
+          class="answer-input"
+          maxlength="160"
+          placeholder="写下今天想告诉对方的话"
+          auto-height
+        />
+        <view class="answer-actions">
+          <text class="answer-meta">{{ state.today.answer ? `已保存 ${answerTimeText}` : `${answerDraft.length}/160` }}</text>
+          <button class="save-answer tap-target" :class="{ disabled: !canSaveAnswer }" hover-class="button-hover" @tap="handleSaveAnswer">
+            保存回答
+          </button>
+        </view>
+      </view>
+
       <view class="plan-card soft-card">
         <view class="spark spark-left" aria-hidden="true"></view>
         <view class="spark spark-right" aria-hidden="true"></view>
@@ -39,15 +75,12 @@
         </button>
       </view>
 
-      <view class="quick-grid">
-        <view class="quick-card soft-card">
-          <view class="quick-head">
-            <view class="card-icon question-icon" aria-hidden="true"></view>
-            <text>今日问题</text>
-          </view>
-          <text class="quick-text">“{{ dailyQuestion }}”</text>
-        </view>
+      <view v-if="isTodayComplete" class="complete-card soft-card" @tap="goMemories">
+        <text class="complete-label">今天的陪伴已收好</text>
+        <text class="complete-copy">回答和小计划已经进入每日记录，之后可以在回忆页慢慢翻。</text>
+      </view>
 
+      <view class="quick-grid">
         <view class="quick-card soft-card">
           <view class="quick-head">
             <view class="card-icon list-icon" aria-hidden="true"></view>
@@ -72,10 +105,10 @@
         </view>
       </view>
 
-      <view v-if="latestHistory" class="history-card soft-card">
-        <text class="history-label">最近完成</text>
-        <text class="history-title">{{ latestHistory.title }}</text>
-        <text class="history-date">{{ latestHistory.completedAt }}</text>
+      <view v-if="latestDailyEntry" class="history-card soft-card" @tap="goMemories">
+        <text class="history-label">最近每日记录</text>
+        <text class="history-title">{{ latestDailyEntry.answer || latestDailyEntry.planTitle }}</text>
+        <text class="history-date">{{ latestDailyEntry.date }}</text>
       </view>
     </view>
   </view>
@@ -84,24 +117,57 @@
 <script setup>
 import { computed, ref } from 'vue'
 import { onShow } from '@dcloudio/uni-app'
-import { countLoveDays } from '../../utils/date'
-import { drawPlan, getDailyQuestion, loadState, toggleTodayPlanDone } from '../../store/love'
+import { countLoveDays, formatShortTime } from '../../utils/date'
+import {
+  drawPlan,
+  getDailyQuestion,
+  getLatestDailyEntry,
+  loadState,
+  saveDailyAnswer,
+  toggleTodayPlanDone
+} from '../../store/love'
 
 const state = ref(loadState())
+const answerDraft = ref(state.value.today.answer || '')
 
 const loveDays = computed(() => countLoveDays(state.value.profile.startDate))
 const dailyQuestion = computed(() => getDailyQuestion(state.value))
 const currentPlan = computed(() => state.value.plans.find((item) => item.id === state.value.today.planId))
 const isPlanDone = computed(() => currentPlan.value && state.value.today.completedPlanIds.includes(currentPlan.value.id))
-const pendingWishes = computed(() => state.value.wishes.filter((item) => !item.done))
+const hasAnswer = computed(() => Boolean(state.value.today.answer.trim()))
+const canSaveAnswer = computed(() => Boolean(answerDraft.value.trim()) && answerDraft.value.trim() !== state.value.today.answer)
+const isTodayComplete = computed(() => hasAnswer.value && isPlanDone.value)
+const pendingWishes = computed(() => state.value.wishes.filter((item) => !item.done && !item.deletedAt))
 const pendingWishCount = computed(() => pendingWishes.value.length)
 const nextWish = computed(() => pendingWishes.value[0])
-const latestMemory = computed(() => state.value.memories[0])
-const latestHistory = computed(() => state.value.planHistory[0])
+const latestMemory = computed(() => state.value.memories.find((item) => !item.deletedAt))
+const latestDailyEntry = computed(() => getLatestDailyEntry(state.value))
+const answerTimeText = computed(() => formatShortTime(state.value.today.answeredAt))
+const progressTitle = computed(() => {
+  if (isTodayComplete.value) return '今天已经完成，两个人都靠近了一点'
+  if (hasAnswer.value) return '还差一个小计划'
+  if (isPlanDone.value) return '还差一句今日回答'
+  return '从一个问题和一个小计划开始'
+})
 
 onShow(() => {
   state.value = loadState()
+  answerDraft.value = state.value.today.answer || ''
 })
+
+function handleSaveAnswer() {
+  if (!answerDraft.value.trim()) {
+    uni.showToast({ title: '先写下一点想法吧', icon: 'none' })
+    return
+  }
+  if (!canSaveAnswer.value) {
+    uni.showToast({ title: '已经保存过啦', icon: 'none' })
+    return
+  }
+  state.value = saveDailyAnswer(answerDraft.value)
+  answerDraft.value = state.value.today.answer
+  uni.showToast({ title: '已保存', icon: 'none' })
+}
 
 function handleDraw() {
   const result = drawPlan()
@@ -115,6 +181,10 @@ function handleDraw() {
 function handleToggleDone() {
   if (!currentPlan.value) return
   state.value = toggleTodayPlanDone(currentPlan.value.id)
+}
+
+function goMemories() {
+  uni.switchTab({ url: '/pages/memories/index' })
 }
 </script>
 
@@ -140,7 +210,7 @@ function handleToggleDone() {
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 42rpx 0 42rpx;
+  padding: 42rpx 0 34rpx;
 }
 
 .eyebrow {
@@ -206,6 +276,131 @@ function handleToggleDone() {
 .memory-icon::after {
   left: 0;
   top: -9rpx;
+}
+
+.progress-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24rpx;
+  padding: 26rpx 28rpx;
+  margin-bottom: 22rpx;
+}
+
+.progress-label,
+.card-kicker {
+  color: #d06451;
+  font-size: 22rpx;
+  font-weight: 900;
+}
+
+.progress-title {
+  display: block;
+  margin-top: 8rpx;
+  color: #553a35;
+  font-size: 28rpx;
+  font-weight: 900;
+  line-height: 1.35;
+}
+
+.progress-steps {
+  display: flex;
+  align-items: center;
+  flex: 0 0 208rpx;
+}
+
+.step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8rpx;
+  color: #a78073;
+  font-size: 21rpx;
+  font-weight: 800;
+}
+
+.step.done {
+  color: #d75d4b;
+}
+
+.step-dot {
+  width: 28rpx;
+  height: 28rpx;
+  border: 4rpx solid currentColor;
+  border-radius: 50%;
+  background: #fff9f4;
+}
+
+.step.done .step-dot {
+  background: currentColor;
+}
+
+.step-line {
+  flex: 1;
+  height: 4rpx;
+  background: #efd0c4;
+  margin: 0 10rpx 30rpx;
+}
+
+.step-line.done {
+  background: #d75d4b;
+}
+
+.question-card {
+  padding: 32rpx;
+  margin-bottom: 22rpx;
+}
+
+.question-text {
+  display: block;
+  margin-top: 12rpx;
+  color: #553a35;
+  font-size: 34rpx;
+  font-weight: 900;
+  line-height: 1.35;
+}
+
+.answer-input {
+  width: 100%;
+  min-height: 142rpx;
+  border: 1rpx solid rgba(158, 98, 78, 0.18);
+  border-radius: 22rpx;
+  background: #fff8f3;
+  color: #5f433d;
+  font-size: 27rpx;
+  line-height: 1.5;
+  margin-top: 24rpx;
+  padding: 22rpx 24rpx;
+}
+
+.answer-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18rpx;
+  margin-top: 18rpx;
+}
+
+.answer-meta {
+  color: #8a645a;
+  font-size: 23rpx;
+}
+
+.save-answer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 168rpx;
+  min-height: 66rpx;
+  border-radius: 999rpx;
+  background: #fff0e9;
+  color: #d75d4b;
+  font-size: 25rpx;
+  font-weight: 900;
+}
+
+.save-answer.disabled {
+  opacity: 0.45;
 }
 
 .plan-card {
@@ -406,9 +601,31 @@ function handleToggleDone() {
   transform: rotate(-45deg);
 }
 
+.complete-card,
+.history-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8rpx;
+  margin-top: 24rpx;
+  padding: 24rpx;
+}
+
+.complete-label,
+.history-label {
+  color: #d06451;
+  font-size: 22rpx;
+  font-weight: 900;
+}
+
+.complete-copy {
+  color: #6f5149;
+  font-size: 25rpx;
+  line-height: 1.5;
+}
+
 .quick-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 16rpx;
   margin-top: 46rpx;
 }
@@ -437,23 +654,6 @@ function handleToggleDone() {
   width: 28rpx;
   height: 28rpx;
   color: #db715d;
-}
-
-.question-icon {
-  border: 3rpx solid currentColor;
-  border-radius: 50%;
-}
-
-.question-icon::after {
-  position: absolute;
-  left: 10rpx;
-  bottom: -7rpx;
-  width: 8rpx;
-  height: 8rpx;
-  border-right: 3rpx solid currentColor;
-  border-bottom: 3rpx solid currentColor;
-  transform: rotate(35deg);
-  content: '';
 }
 
 .list-icon {
@@ -560,24 +760,11 @@ function handleToggleDone() {
   padding: 0 16rpx;
 }
 
-.history-card {
-  display: flex;
-  flex-direction: column;
-  gap: 8rpx;
-  margin-top: 24rpx;
-  padding: 24rpx;
-}
-
-.history-label {
-  color: #d06451;
-  font-size: 22rpx;
-  font-weight: 900;
-}
-
 .history-title {
   color: #5d3e38;
   font-size: 29rpx;
   font-weight: 900;
+  line-height: 1.35;
 }
 
 .history-date {
@@ -586,6 +773,12 @@ function handleToggleDone() {
 }
 
 @media screen and (max-width: 360px) {
+  .progress-card,
+  .answer-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
   .quick-grid {
     grid-template-columns: 1fr;
   }

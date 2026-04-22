@@ -2,7 +2,39 @@
   <view class="app-page">
     <view class="page-head">
       <text class="section-title">最近回忆</text>
-      <text class="muted">不用隆重，日常也值得被保存。</text>
+      <text class="muted">日常回答、完成的小计划和约会片段都放在这里。</text>
+    </view>
+
+    <view class="daily-section">
+      <view class="section-row">
+        <view>
+          <text class="sub-title">每日记录</text>
+          <text class="sub-copy">按日期回看你们每天靠近的一点点。</text>
+        </view>
+        <text class="count-pill">{{ dailyEntries.length }} 条</text>
+      </view>
+
+      <view v-if="dailyEntries.length" class="daily-list">
+        <view v-for="entry in dailyEntries" :key="entry.id" class="daily-item soft-card" @tap="toggleDailyDetail(entry.id)">
+          <view class="daily-head">
+            <view>
+              <text class="daily-date">{{ formatFriendlyDate(entry.date) }}</text>
+              <text class="daily-status">{{ entry.planDone ? '已完成小计划' : '记录了一点想法' }}</text>
+            </view>
+            <button class="text-action danger" @tap.stop="confirmDeleteDaily(entry)">删除</button>
+          </view>
+          <text class="daily-question">“{{ entry.question }}”</text>
+          <text v-if="entry.answer" class="daily-answer">{{ entry.answer }}</text>
+          <view v-if="openedDailyId === entry.id" class="daily-detail">
+            <text class="detail-line">回答时间：{{ formatShortTime(entry.answeredAt) || '未记录' }}</text>
+            <text class="detail-line">小计划：{{ entry.planTitle || '还没有抽取' }}</text>
+            <text v-if="entry.planDetail" class="detail-line">{{ entry.planDetail }}</text>
+            <text class="detail-line">完成时间：{{ formatShortTime(entry.planCompletedAt) || '未完成' }}</text>
+          </view>
+        </view>
+      </view>
+
+      <view v-else class="empty-state soft-card">完成一次今日回答或小计划后，这里会自动出现每日记录。</view>
     </view>
 
     <view class="memory-form soft-card">
@@ -38,8 +70,8 @@
       </view>
     </view>
 
-    <view v-if="state.memories.length" class="memory-list">
-      <view v-for="memory in state.memories" :key="memory.id" class="memory-item soft-card">
+    <view v-if="activeMemories.length" class="memory-list">
+      <view v-for="memory in activeMemories" :key="memory.id" class="memory-item soft-card">
         <image v-if="memory.image" class="memory-cover image-cover" :src="memory.image" mode="aspectFill" />
         <view v-else class="memory-cover" :style="{ background: coverBackground(memory.color) }">
           <view class="cover-heart" aria-hidden="true"></view>
@@ -56,19 +88,27 @@
       </view>
     </view>
 
-    <view v-else class="empty-state soft-card">还没有回忆，下一次约会回来就写一笔。</view>
+    <view v-else class="empty-state soft-card">还没有手动回忆，下一次约会回来就写一笔。</view>
   </view>
 </template>
 
 <script setup>
 import { computed, reactive, ref } from 'vue'
 import { onShow } from '@dcloudio/uni-app'
-import { addMemory, deleteMemory, loadState, updateMemory } from '../../store/love'
-import { formatFriendlyDate, getTodayString } from '../../utils/date'
+import {
+  addMemory,
+  deleteDailyEntry,
+  deleteMemory,
+  getActiveDailyEntries,
+  loadState,
+  updateMemory
+} from '../../store/love'
+import { formatFriendlyDate, formatShortTime, getTodayString } from '../../utils/date'
 
 const colors = ['#f9b38d', '#ff8b75', '#e8ad79', '#f2c1b2']
 const state = ref(loadState())
 const editingId = ref('')
+const openedDailyId = ref('')
 const form = reactive({
   title: '',
   date: getTodayString(),
@@ -77,6 +117,8 @@ const form = reactive({
 })
 
 const canSubmit = computed(() => form.title.trim() && form.description.trim())
+const activeMemories = computed(() => state.value.memories.filter((item) => !item.deletedAt))
+const dailyEntries = computed(() => getActiveDailyEntries(state.value))
 
 onShow(() => {
   state.value = loadState()
@@ -132,6 +174,24 @@ function resetForm() {
   form.image = ''
 }
 
+function toggleDailyDetail(id) {
+  openedDailyId.value = openedDailyId.value === id ? '' : id
+}
+
+function confirmDeleteDaily(entry) {
+  uni.showModal({
+    title: '删除每日记录',
+    content: `确定删除 ${formatFriendlyDate(entry.date)} 的每日记录吗？`,
+    confirmText: '删除',
+    confirmColor: '#d75d4b',
+    success: (res) => {
+      if (!res.confirm) return
+      state.value = deleteDailyEntry(entry.id)
+      if (openedDailyId.value === entry.id) openedDailyId.value = ''
+    }
+  })
+}
+
 function confirmDelete(memory) {
   uni.showModal({
     title: '删除回忆',
@@ -148,6 +208,109 @@ function confirmDelete(memory) {
 </script>
 
 <style scoped>
+.daily-section {
+  margin-bottom: 30rpx;
+}
+
+.section-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20rpx;
+  margin-bottom: 18rpx;
+}
+
+.sub-title {
+  display: block;
+  color: #553a35;
+  font-size: 31rpx;
+  font-weight: 900;
+}
+
+.sub-copy {
+  display: block;
+  margin-top: 6rpx;
+  color: #806257;
+  font-size: 24rpx;
+  line-height: 1.45;
+}
+
+.count-pill {
+  flex: 0 0 auto;
+  min-height: 46rpx;
+  border-radius: 999rpx;
+  background: #ffe7dc;
+  color: #c95b49;
+  font-size: 22rpx;
+  font-weight: 900;
+  line-height: 46rpx;
+  padding: 0 18rpx;
+}
+
+.daily-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16rpx;
+}
+
+.daily-item {
+  padding: 24rpx;
+}
+
+.daily-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18rpx;
+}
+
+.daily-date {
+  display: block;
+  color: #553a35;
+  font-size: 30rpx;
+  font-weight: 900;
+}
+
+.daily-status {
+  display: block;
+  margin-top: 8rpx;
+  color: #d06451;
+  font-size: 22rpx;
+  font-weight: 800;
+}
+
+.daily-question {
+  display: block;
+  margin-top: 18rpx;
+  color: #6f5149;
+  font-size: 25rpx;
+  line-height: 1.5;
+}
+
+.daily-answer {
+  display: block;
+  margin-top: 12rpx;
+  color: #513832;
+  font-size: 28rpx;
+  font-weight: 800;
+  line-height: 1.45;
+}
+
+.daily-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 8rpx;
+  border-top: 1rpx solid rgba(171, 112, 91, 0.14);
+  margin-top: 18rpx;
+  padding-top: 18rpx;
+}
+
+.detail-line {
+  color: #7d5f56;
+  font-size: 24rpx;
+  line-height: 1.45;
+}
+
 .memory-form {
   padding: 28rpx;
 }
