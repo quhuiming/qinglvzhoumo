@@ -2,40 +2,20 @@
 
 Spring Boot 后端 MVP，用于让两个人共享愿望、回忆和每日记录。
 
-## 本地 MySQL80 运行
+## Docker MySQL 运行
 
-你当前电脑已经有 Windows 本机 MySQL80 服务，端口是 `3306`。先创建项目数据库和账号。
+当前默认使用 Docker MySQL。为了避免和本机 MySQL80 的 `3306` 冲突，Docker MySQL 暴露在 `3307`。
 
-方式一：在 Navicat 或 MySQL 命令行里执行：
-
-```sql
-CREATE DATABASE IF NOT EXISTS qinglvzhoumo
-  DEFAULT CHARACTER SET utf8mb4
-  COLLATE utf8mb4_unicode_ci;
-
-CREATE USER IF NOT EXISTS 'qinglv'@'localhost'
-  IDENTIFIED BY 'qinglvzhoumo_dev';
-
-CREATE USER IF NOT EXISTS 'qinglv'@'127.0.0.1'
-  IDENTIFIED BY 'qinglvzhoumo_dev';
-
-GRANT ALL PRIVILEGES ON qinglvzhoumo.* TO 'qinglv'@'localhost';
-GRANT ALL PRIVILEGES ON qinglvzhoumo.* TO 'qinglv'@'127.0.0.1';
-
-FLUSH PRIVILEGES;
-```
-
-方式二：如果你有 root 密码，可以执行：
+先启动 MySQL：
 
 ```bash
 cd backend
-mysql -u root -p < sql/init-local-mysql.sql
+docker compose up -d
 ```
 
-然后启动后端：
+再启动后端：
 
 ```bash
-cd backend
 mvn -s maven-settings.xml spring-boot:run
 ```
 
@@ -44,9 +24,29 @@ mvn -s maven-settings.xml spring-boot:run
 - 数据库：`qinglvzhoumo`
 - 用户名：`qinglv`
 - 密码：`qinglvzhoumo_dev`
-- 端口：`3306`
+- 端口：`3307`
 
-如需连接其他 MySQL，可覆盖环境变量：
+前端 H5 默认连接 Java 后端：
+
+```text
+http://localhost:8080
+```
+
+Android 模拟器默认连接：
+
+```text
+http://10.0.2.2:8080
+```
+
+真机测试时，请在 App 的“我们”页把后端地址改成电脑局域网 IP，例如：
+
+```text
+http://192.168.x.x:8080
+```
+
+## 本机 MySQL80 备用
+
+如果临时不用 Docker，可以覆盖环境变量改回本机 MySQL80：
 
 ```bash
 set DB_URL=jdbc:mysql://localhost:3306/qinglvzhoumo?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&useSSL=false
@@ -55,15 +55,10 @@ set DB_PASSWORD=qinglvzhoumo_dev
 mvn -s maven-settings.xml spring-boot:run
 ```
 
-## Docker MySQL 备用
+本机 MySQL 初始化脚本在：
 
-如果以后 Docker Desktop 可用，也可以启动项目自带的 MySQL。为了避免和本机 MySQL80 冲突，Docker MySQL 暴露在 `3307`：
-
-```bash
-cd backend
-docker compose up -d
-set DB_URL=jdbc:mysql://localhost:3307/qinglvzhoumo?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&useSSL=false
-mvn -s maven-settings.xml spring-boot:run
+```text
+backend/sql/init-local-mysql.sql
 ```
 
 ## 测试
