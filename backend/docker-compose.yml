@@ -1,0 +1,26 @@
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: qinglvzhoumo-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: qinglvzhoumo
+      MYSQL_USER: qinglv
+      MYSQL_PASSWORD: qinglvzhoumo_dev
+      MYSQL_ROOT_PASSWORD: qinglvzhoumo_root
+      TZ: Asia/Shanghai
+    ports:
+      - "3306:3306"
+    volumes:
+      - qinglvzhoumo_mysql_data:/var/lib/mysql
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uqinglv", "-pqinglvzhoumo_dev"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  qinglvzhoumo_mysql_data:
