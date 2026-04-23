@@ -29,6 +29,8 @@ export function getSyncConfig() {
     apiBaseUrl,
     token: saved.token || '',
     userId: saved.userId || '',
+    phone: saved.phone || '',
+    registered: Boolean(saved.registered),
     coupleId: saved.coupleId || '',
     inviteCode: saved.inviteCode || '',
     memberCount: saved.memberCount || 0,
@@ -74,7 +76,10 @@ export function requestBackend(path, options = {}) {
           return
         }
         const message = res.data?.message || res.data?.error || `HTTP ${res.statusCode}`
-        reject(new Error(message))
+        const error = new Error(message)
+        error.code = res.data?.code || ''
+        error.statusCode = res.statusCode
+        reject(error)
       },
       fail: (error) => {
         reject(new Error(error.errMsg || 'Network request failed'))
@@ -97,10 +102,78 @@ export async function ensureAnonymousAuth(nickname = '') {
   return saveSyncConfig({
     token: data.token,
     userId: data.userId,
+    phone: data.phone || '',
+    registered: Boolean(data.registered),
     coupleId: data.coupleId || '',
     enabled: true,
     lastError: ''
   })
+}
+
+export async function registerAccount({ phone, password, nickname = '' }) {
+  await ensureAnonymousAuth(nickname)
+  const data = await requestBackend('/api/auth/register', {
+    method: 'POST',
+    data: { phone: phone.trim(), password, nickname }
+  })
+  return saveSyncConfig({
+    token: data.token,
+    userId: data.userId,
+    phone: data.phone || phone.trim(),
+    registered: Boolean(data.registered),
+    coupleId: data.coupleId || '',
+    enabled: Boolean(data.coupleId),
+    lastError: ''
+  })
+}
+
+export async function loginAccount({ phone, password }) {
+  const data = await requestBackend('/api/auth/login', {
+    method: 'POST',
+    auth: false,
+    data: {
+      phone: phone.trim(),
+      password,
+      deviceId: getDeviceId()
+    }
+  })
+  return saveSyncConfig({
+    token: data.token,
+    userId: data.userId,
+    phone: data.phone || phone.trim(),
+    registered: Boolean(data.registered),
+    coupleId: data.coupleId || '',
+    enabled: Boolean(data.coupleId),
+    lastPulledAt: '',
+    lastError: ''
+  })
+}
+
+export async function logoutAccount() {
+  const config = getSyncConfig()
+  if (config.token) {
+    try {
+      await requestBackend('/api/auth/logout', { method: 'POST' })
+    } catch (error) {
+      // Local logout should not be blocked by a stale token or offline backend.
+    }
+  }
+  return saveSyncConfig({
+    token: '',
+    userId: '',
+    phone: '',
+    registered: false,
+    coupleId: '',
+    inviteCode: '',
+    memberCount: 0,
+    enabled: false,
+    lastPulledAt: '',
+    lastError: ''
+  })
+}
+
+export function getCurrentAccount() {
+  return requestBackend('/api/auth/me')
 }
 
 export async function createInvite(nickname = '') {
@@ -120,6 +193,8 @@ export async function getCoupleStatus(nickname = '') {
   const data = await requestBackend('/api/couples/me')
   return saveSyncConfig({
     userId: data.userId,
+    phone: data.phone || getSyncConfig().phone || '',
+    registered: Boolean(data.registered || getSyncConfig().registered),
     coupleId: data.coupleId || '',
     inviteCode: data.inviteCode || '',
     memberCount: data.memberCount || 0,

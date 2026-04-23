@@ -17,7 +17,7 @@ public class UserAccount {
   @GeneratedValue(strategy = GenerationType.IDENTITY)
   private Long id;
 
-  @Column(nullable = false, unique = true, length = 128)
+  @Column(unique = true, length = 128)
   private String deviceId;
 
   @Column(nullable = false, length = 64)
@@ -25,6 +25,19 @@ public class UserAccount {
 
   @Column(nullable = false, unique = true, length = 96)
   private String accessToken;
+
+  @Column(unique = true, length = 20)
+  private String phone;
+
+  @Column(length = 128)
+  private String passwordHash;
+
+  @Column(nullable = false, length = 16)
+  private String accountType;
+
+  private Instant registeredAt;
+
+  private Instant lastLoginAt;
 
   @Column(nullable = false)
   private Instant createdAt;
@@ -35,6 +48,9 @@ public class UserAccount {
   @PrePersist
   void prePersist() {
     Instant now = Instant.now();
+    if (accountType == null || accountType.isBlank()) {
+      accountType = "ANONYMOUS";
+    }
     createdAt = now;
     updatedAt = now;
   }
@@ -70,5 +86,45 @@ public class UserAccount {
 
   public void setAccessToken(String accessToken) {
     this.accessToken = accessToken;
+  }
+
+  public String getPhone() {
+    return phone;
+  }
+
+  public void setPhone(String phone) {
+    this.phone = phone;
+  }
+
+  public String getPasswordHash() {
+    return passwordHash;
+  }
+
+  public void setPasswordHash(String passwordHash) {
+    this.passwordHash = passwordHash;
+  }
+
+  public String getAccountType() {
+    return accountType;
+  }
+
+  public void setAccountType(String accountType) {
+    this.accountType = accountType;
+  }
+
+  public Instant getRegisteredAt() {
+    return registeredAt;
+  }
+
+  public void setRegisteredAt(Instant registeredAt) {
+    this.registeredAt = registeredAt;
+  }
+
+  public Instant getLastLoginAt() {
+    return lastLoginAt;
+  }
+
+  public void setLastLoginAt(Instant lastLoginAt) {
+    this.lastLoginAt = lastLoginAt;
   }
 }

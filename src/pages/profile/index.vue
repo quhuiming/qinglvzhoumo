@@ -29,6 +29,37 @@
       <button class="primary-button tap-target" hover-class="button-hover" @tap="handleSave">保存我们</button>
     </view>
 
+    <view class="account-card soft-card">
+      <view class="sync-head">
+        <view>
+          <text class="sync-title">账号</text>
+          <text class="sync-copy">{{ accountStatusText }}</text>
+        </view>
+        <text class="sync-badge" :class="{ online: isLoggedIn }">{{ isLoggedIn ? '已登录' : '可跳过' }}</text>
+      </view>
+
+      <view v-if="!isLoggedIn">
+        <view class="form-field">
+          <text class="field-label">手机号</text>
+          <input v-model="accountForm.phone" class="field-input" type="number" maxlength="11" placeholder="输入手机号" cursor-spacing="120" :adjust-position="true" />
+        </view>
+        <view class="form-field">
+          <text class="field-label">密码</text>
+          <input v-model="accountForm.password" class="field-input" password type="text" placeholder="8-32 位，包含字母和数字" cursor-spacing="120" :adjust-position="true" />
+        </view>
+        <view class="account-actions">
+          <button class="ghost-button tap-target" :class="{ disabled: syncing }" hover-class="soft-hover" @tap="handleLoginAccount">登录</button>
+          <button class="primary-button tap-target" :class="{ disabled: syncing }" hover-class="button-hover" @tap="handleRegisterAccount">注册并绑定</button>
+        </view>
+      </view>
+
+      <view v-else class="account-info">
+        <text class="account-phone">{{ syncConfig.phone }}</text>
+        <text class="sync-tip">登录后可在新设备恢复情侣空间和已同步内容。</text>
+        <button class="ghost-button tap-target danger-button" :class="{ disabled: syncing }" hover-class="soft-hover" @tap="handleLogoutAccount">退出登录</button>
+      </view>
+    </view>
+
     <view class="sync-card soft-card">
       <view class="sync-head">
         <view>
@@ -117,7 +148,10 @@ import {
   joinCoupleByInvite,
   leaveCoupleSpace,
   loadState,
+  loginPhoneAccount,
+  logoutPhoneAccount,
   refreshCoupleStatus,
+  registerPhoneAccount,
   resetState,
   setBackendApiBaseUrl,
   syncNow,
@@ -126,6 +160,7 @@ import {
 
 const state = ref(loadState())
 const form = reactive({ ...state.value.profile })
+const accountForm = reactive({ phone: '', password: '' })
 const syncConfig = ref(getBackendSyncConfig())
 const apiBaseUrl = ref(syncConfig.value.apiBaseUrl)
 const inviteCode = ref('')
@@ -136,6 +171,11 @@ const activeWishes = computed(() => getActiveWishes(state.value))
 const activeMemories = computed(() => getActiveMemories(state.value))
 const undoneCount = computed(() => activeWishes.value.filter((item) => !item.done).length)
 const doneWishCount = computed(() => activeWishes.value.filter((item) => item.done).length)
+const isLoggedIn = computed(() => Boolean(syncConfig.value.registered && syncConfig.value.phone))
+const accountStatusText = computed(() => {
+  if (isLoggedIn.value) return '已绑定手机号账号，换设备登录后可恢复已同步内容。'
+  return '可跳过登录继续单机使用；注册会把当前本机数据绑定到手机号。'
+})
 const syncStatusText = computed(() => {
   if (syncConfig.value.coupleId) return '本机内容会同步到 Java 后端，另一台设备加入后可共享查看。'
   return '先创建情侣空间，或输入对方的邀请码加入。'
@@ -146,6 +186,7 @@ onShow(() => {
   Object.assign(form, state.value.profile)
   syncConfig.value = getBackendSyncConfig()
   apiBaseUrl.value = syncConfig.value.apiBaseUrl
+  accountForm.phone = syncConfig.value.phone || accountForm.phone
 })
 
 function handleDateChange(event) {
@@ -166,6 +207,22 @@ function handleSave() {
   uni.showToast({ title: '保存好了', icon: 'none' })
 }
 
+function handleLoginAccount() {
+  if (!validateAccountForm()) return
+  saveApiBaseUrl()
+  runSyncTask(() => loginPhoneAccount(accountForm.phone, accountForm.password), '登录成功')
+}
+
+function handleRegisterAccount() {
+  if (!validateAccountForm()) return
+  saveApiBaseUrl()
+  runSyncTask(() => registerPhoneAccount(accountForm.phone, accountForm.password), '注册成功')
+}
+
+function handleLogoutAccount() {
+  runSyncTask(() => logoutPhoneAccount(), '已退出登录')
+}
+
 function refreshSyncConfig() {
   syncConfig.value = getBackendSyncConfig()
   apiBaseUrl.value = syncConfig.value.apiBaseUrl
@@ -180,6 +237,18 @@ function saveApiBaseUrl() {
   uni.showToast({ title: '已保存后端地址', icon: 'none' })
 }
 
+function validateAccountForm() {
+  if (!/^1[3-9]\d{9}$/.test(accountForm.phone.trim())) {
+    uni.showToast({ title: '请输入正确手机号', icon: 'none' })
+    return false
+  }
+  if (!/^(?=.*[A-Za-z])(?=.*\d).{8,32}$/.test(accountForm.password)) {
+    uni.showToast({ title: '密码需 8-32 位且包含字母和数字', icon: 'none' })
+    return false
+  }
+  return true
+}
+
 async function runSyncTask(task, successTitle) {
   if (syncing.value) return
   syncing.value = true
@@ -192,7 +261,9 @@ async function runSyncTask(task, successTitle) {
     refreshSyncConfig()
     uni.showModal({
       title: '连接后端失败',
-      content: error?.message || '请确认 Java 后端已经启动',
+      content: error?.code === 'COUPLE_SPACE_CONFLICT'
+        ? '当前设备已绑定另一个情侣空间，请先退出当前空间或使用对应账号登录。'
+        : (error?.message || '请确认 Java 后端已经启动'),
       showCancel: false
     })
   } finally {
@@ -340,6 +411,30 @@ function confirmReset() {
 .sync-card {
   margin-top: 26rpx;
   padding: 28rpx;
+}
+
+.account-card {
+  margin-top: 26rpx;
+  padding: 28rpx;
+}
+
+.account-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16rpx;
+  margin-top: 12rpx;
+}
+
+.account-info {
+  display: flex;
+  flex-direction: column;
+  gap: 14rpx;
+}
+
+.account-phone {
+  color: #553a35;
+  font-size: 34rpx;
+  font-weight: 900;
 }
 
 .sync-head {

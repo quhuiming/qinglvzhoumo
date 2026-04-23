@@ -6,8 +6,11 @@ import {
   getSyncConfig,
   joinInvite,
   leaveCouple,
+  loginAccount,
+  logoutAccount,
   pullSync,
   pushSync,
+  registerAccount,
   saveSyncConfig
 } from '../utils/backend'
 
@@ -506,6 +509,25 @@ export async function joinCoupleByInvite(inviteCode) {
 
 export async function leaveCoupleSpace() {
   return leaveCouple()
+}
+
+export async function registerPhoneAccount(phone, password) {
+  const state = loadState()
+  const config = await registerAccount({ phone, password, nickname: state.profile.me })
+  await refreshCoupleStatus()
+  await syncNow({ full: true, silent: true })
+  return config
+}
+
+export async function loginPhoneAccount(phone, password) {
+  const config = await loginAccount({ phone, password })
+  await refreshCoupleStatus()
+  await syncNow({ full: true, silent: true })
+  return config
+}
+
+export async function logoutPhoneAccount() {
+  return logoutAccount()
 }
 
 export function initializeBackendSync() {
