@@ -61,7 +61,7 @@ public class CoupleService {
   @Transactional(readOnly = true)
   public CoupleDtos.CoupleStatusResponse status(AuthenticatedUser user) {
     CoupleMember member = memberRepository.findByUserId(user.id()).orElse(null);
-    if (member == null) {
+    if (member == null || member.getCoupleId() == null) {
       return new CoupleDtos.CoupleStatusResponse(
           user.id(),
           user.account().getNickname(),
@@ -83,10 +83,12 @@ public class CoupleService {
 
   @Transactional
   public CoupleDtos.CoupleStatusResponse leave(AuthenticatedUser user) {
+    CoupleMember member = memberRepository.findByUserId(user.id()).orElse(null);
     memberRepository.deleteByUserId(user.id());
+    String nickname = user.account() != null ? user.account().getNickname() : "";
     return new CoupleDtos.CoupleStatusResponse(
         user.id(),
-        user.account().getNickname(),
+        nickname,
         null,
         "",
         0

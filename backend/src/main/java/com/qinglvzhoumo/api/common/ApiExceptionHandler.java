@@ -49,6 +49,17 @@ public class ApiExceptionHandler {
 
   @ExceptionHandler(Exception.class)
   public ResponseEntity<Map<String, Object>> handleUnexpected(Exception error) {
+    Throwable cause = error;
+    while (cause.getCause() != null) {
+      cause = cause.getCause();
+    }
+    if (cause instanceof HttpMessageNotReadableException) {
+      return ResponseEntity.badRequest().body(Map.of(
+          "code", "INVALID_JSON",
+          "message", "请求数据格式不正确",
+          "timestamp", Instant.now().toString()
+      ));
+    }
     log.error("Unexpected API error", error);
     return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of(
         "code", "INTERNAL_ERROR",
