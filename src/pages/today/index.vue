@@ -72,14 +72,14 @@
           <text class="picked-title">{{ currentPlan.title }}</text>
           <text class="picked-detail">{{ currentPlan.detail }}</text>
         </view>
-        <button class="draw-button tap-target" hover-class="button-hover" @tap="handleDraw">
+        <button class="draw-button tap-target" :class="{ locked: isPlanDone }" hover-class="button-hover" @tap="handleDraw">
           <view class="button-icon dice-icon" aria-hidden="true">
             <text></text>
             <text></text>
             <text></text>
             <text></text>
           </view>
-          <text>{{ currentPlan ? '换一个小计划' : '抽一个小计划' }}</text>
+          <text>{{ isPlanDone ? '今日计划已完成' : (currentPlan ? '换一个小计划' : '抽一个小计划') }}</text>
           <view class="arrow-icon" aria-hidden="true"></view>
         </button>
         <button v-if="currentPlan" class="done-button tap-target" :class="{ completed: isPlanDone }" hover-class="soft-hover" @tap="handleToggleDone">
@@ -226,6 +226,10 @@ function handleSaveAnswer() {
 }
 
 function handleDraw() {
+  if (isPlanDone.value) {
+    uni.showToast({ title: '今天已经完成啦，明天再换新的', icon: 'none' })
+    return
+  }
   const result = drawPlan()
   state.value = result.state
   uni.showToast({
@@ -627,6 +631,12 @@ function goMemories() {
   color: #fff;
   font-size: 31rpx;
   font-weight: 800;
+}
+
+.draw-button.locked {
+  background: linear-gradient(135deg, #caa296 0%, #b6897d 100%);
+  box-shadow: none;
+  opacity: 0.82;
 }
 
 .button-icon {

@@ -584,6 +584,14 @@ export function resetState() {
 
 export function drawPlan() {
   const state = loadState()
+  const todayEntry = findTodayEntry(state)
+  if (todayEntry?.planDone) {
+    return {
+      state,
+      plan: state.plans.find((item) => item.id === todayEntry.planId) || null,
+      locked: true
+    }
+  }
   const currentId = state.today.planId
   const pool = state.plans.filter((item) => item.id !== currentId)
   const plans = pool.length ? pool : state.plans
