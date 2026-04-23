@@ -38,7 +38,7 @@ public class SyncItem {
   private String clientId;
 
   @Lob
-  @Column(nullable = false, columnDefinition = "TEXT")
+  @Column(nullable = false, columnDefinition = "MEDIUMTEXT")
   private String payload;
 
   @Column(nullable = false)

@@ -157,9 +157,52 @@ function chooseImage() {
     count: 1,
     sizeType: ['compressed'],
     sourceType: ['album', 'camera'],
-    success: (res) => {
-      form.image = res.tempFilePaths[0] || ''
+    success: async (res) => {
+      const path = res.tempFilePaths[0] || ''
+      const file = res.tempFiles && res.tempFiles[0]
+      form.image = path
+      form.image = await readImageAsDataUrl(path, file)
     }
+  })
+}
+
+function readImageAsDataUrl(path, file) {
+  // #ifdef H5
+  return readWebFileAsDataUrl(file).catch(() => path)
+  // #endif
+  // #ifdef APP-PLUS
+  return readAppFileAsDataUrl(path).catch(() => path)
+  // #endif
+  return Promise.resolve(path)
+}
+
+function readWebFileAsDataUrl(file) {
+  return new Promise((resolve, reject) => {
+    if (!file) {
+      reject(new Error('missing file'))
+      return
+    }
+    const reader = new FileReader()
+    reader.onload = () => resolve(reader.result || '')
+    reader.onerror = reject
+    reader.readAsDataURL(file)
+  })
+}
+
+function readAppFileAsDataUrl(path) {
+  return new Promise((resolve, reject) => {
+    if (!path || typeof plus === 'undefined') {
+      reject(new Error('missing app file api'))
+      return
+    }
+    plus.io.resolveLocalFileSystemURL(path, (entry) => {
+      entry.file((file) => {
+        const reader = new plus.io.FileReader()
+        reader.onloadend = (event) => resolve(event.target.result || path)
+        reader.onerror = reject
+        reader.readAsDataURL(file)
+      }, reject)
+    }, reject)
   })
 }
 

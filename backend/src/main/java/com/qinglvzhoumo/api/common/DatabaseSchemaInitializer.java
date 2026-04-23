@@ -28,6 +28,7 @@ public class DatabaseSchemaInitializer implements ApplicationRunner {
       }
     }
     jdbcTemplate.execute("ALTER TABLE user_accounts MODIFY device_id varchar(128) NULL");
+    jdbcTemplate.execute("ALTER TABLE sync_items MODIFY payload MEDIUMTEXT NOT NULL");
     jdbcTemplate.update("UPDATE user_accounts SET account_type = 'ANONYMOUS' WHERE account_type IS NULL OR account_type = ''");
   }
 }
