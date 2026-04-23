@@ -234,6 +234,12 @@ function activeList(list) {
   return Array.isArray(list) ? list.filter((item) => !item.deletedAt) : []
 }
 
+const syncListTypes = {
+  wishes: 'wish',
+  memories: 'memory',
+  dailyEntries: 'dailyEntry'
+}
+
 function toSyncItems(state) {
   const items = [
     {
@@ -245,8 +251,7 @@ function toSyncItems(state) {
       deletedAt: state.profile.deletedAt || ''
     }
   ]
-  ;['wishes', 'memories', 'dailyEntries'].forEach((key) => {
-    const type = key === 'dailyEntries' ? 'dailyEntry' : key.slice(0, -1)
+  Object.entries(syncListTypes).forEach(([key, type]) => {
     ;(state[key] || []).forEach((item) => {
       items.push({
         type,
