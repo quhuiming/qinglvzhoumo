@@ -616,8 +616,13 @@ export function drawPlan() {
 export function saveDailyAnswer(answer) {
   const text = answer.trim()
   const state = loadState()
-  const nextAnswer = createAnswer(text)
   const current = findTodayEntry(state)
+  const actor = currentActor()
+  const existingAnswer = (current?.answers || []).find((item) => item.actorKey === actor.actorKey && item.text)
+  if (existingAnswer || state.today.answer.trim()) {
+    return state
+  }
+  const nextAnswer = createAnswer(text)
   state.today.answer = text
   state.today.answeredAt = text ? nextAnswer.answeredAt : ''
   upsertDailyEntry(state, {

@@ -43,6 +43,7 @@
           cursor-spacing="140"
           :adjust-position="true"
           :show-confirm-bar="false"
+          :disabled="hasMyAnswer"
         />
         <view class="answer-actions">
           <text class="answer-meta">{{ state.today.answer ? `已保存 ${answerTimeText}` : `${answerDraft.length}/160` }}</text>
@@ -187,7 +188,7 @@ const isPlanDone = computed(() => {
   return state.value.today.completedPlanIds.includes(currentPlan.value.id)
 })
 const hasAnswer = computed(() => Boolean(state.value.today.answer.trim()))
-const canSaveAnswer = computed(() => Boolean(answerDraft.value.trim()) && answerDraft.value.trim() !== state.value.today.answer)
+const canSaveAnswer = computed(() => !hasMyAnswer.value && Boolean(answerDraft.value.trim()))
 const isTodayComplete = computed(() => hasAnswer.value && isPlanDone.value)
 const pendingWishes = computed(() => getActiveWishes(state.value).filter((item) => !item.done))
 const pendingWishCount = computed(() => pendingWishes.value.length)
@@ -197,6 +198,7 @@ const latestDailyEntry = computed(() => getLatestDailyEntry(state.value))
 const latestTimelineItem = computed(() => getLatestTimelineItem(state.value))
 const partnerActivities = computed(() => getPartnerActivities(state.value))
 const answerPair = computed(() => getTodayAnswerPair(state.value))
+const hasMyAnswer = computed(() => Boolean(answerPair.value.mine?.text || state.value.today.answer.trim()))
 const milestoneMessage = computed(() => getMilestoneMessage(loveDays.value))
 const answerTimeText = computed(() => formatShortTime(state.value.today.answeredAt))
 const progressTitle = computed(() => {
@@ -212,6 +214,10 @@ onShow(() => {
 })
 
 function handleSaveAnswer() {
+  if (hasMyAnswer.value) {
+    uni.showToast({ title: '今天已经回答过啦', icon: 'none' })
+    return
+  }
   if (!answerDraft.value.trim()) {
     uni.showToast({ title: '先写下一点想法吧', icon: 'none' })
     return
@@ -447,6 +453,11 @@ function goMemories() {
   line-height: 1.5;
   margin-top: 24rpx;
   padding: 22rpx 24rpx;
+}
+
+.answer-input[disabled] {
+  color: #8a645a;
+  opacity: 0.86;
 }
 
 .answer-actions {
