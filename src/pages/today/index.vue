@@ -836,6 +836,7 @@ function closeWishPopup() {
 }
 
 .wish-popup {
+  position: relative;
   width: 100%;
   max-width: 640rpx;
   max-height: 68vh;
@@ -847,10 +848,10 @@ function closeWishPopup() {
 .popup-head {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 20rpx;
+  justify-content: flex-start;
   border-bottom: 1rpx solid rgba(171, 112, 91, 0.16);
-  padding-bottom: 18rpx;
+  min-height: 64rpx;
+  padding: 0 68rpx 18rpx 0;
 }
 
 .popup-title {
@@ -860,6 +861,9 @@ function closeWishPopup() {
 }
 
 .popup-close {
+  position: absolute;
+  right: 18rpx;
+  top: 18rpx;
   display: flex;
   align-items: center;
   justify-content: center;
