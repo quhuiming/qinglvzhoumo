@@ -47,7 +47,9 @@
 import { computed, ref } from 'vue'
 import { onShow } from '@dcloudio/uni-app'
 import { addWish, deleteWish, getActiveWishes, loadState, toggleWish, updateWish } from '../../store/love'
-import { formatFriendlyDate } from '../../utils/date'
+import { formatFriendlyDate, getTodayString } from '../../utils/date'
+
+const MEMORY_DRAFT_KEY = 'qinglvzhoumo.memory.draft.v1'
 
 const state = ref(loadState())
 const wishText = ref('')
@@ -84,7 +86,25 @@ function cancelEdit() {
 }
 
 function handleToggle(id) {
+  const wish = activeWishes.value.find((item) => item.id === id)
   state.value = toggleWish(id)
+  if (!wish || wish.done) return
+  uni.showModal({
+    title: '记录成回忆吗？',
+    content: `“${wish.title}”已经完成，要不要顺手保存成一段回忆？`,
+    cancelText: '稍后',
+    confirmText: '记录回忆',
+    confirmColor: '#d75d4b',
+    success: (res) => {
+      if (!res.confirm) return
+      uni.setStorageSync(MEMORY_DRAFT_KEY, {
+        title: wish.title,
+        date: getTodayString(),
+        description: `完成了共同愿望：${wish.title}`
+      })
+      uni.switchTab({ url: '/pages/memories/index' })
+    }
+  })
 }
 
 function confirmDelete(wish) {

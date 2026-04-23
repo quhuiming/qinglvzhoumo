@@ -28,6 +28,9 @@ public class SyncItem {
   @Column(name = "couple_id", nullable = false)
   private Long coupleId;
 
+  @Column(name = "author_user_id")
+  private Long authorUserId;
+
   @Column(nullable = false, length = 32)
   private String type;
 
@@ -75,6 +78,14 @@ public class SyncItem {
 
   public void setCoupleId(Long coupleId) {
     this.coupleId = coupleId;
+  }
+
+  public Long getAuthorUserId() {
+    return authorUserId;
+  }
+
+  public void setAuthorUserId(Long authorUserId) {
+    this.authorUserId = authorUserId;
   }
 
   public String getType() {

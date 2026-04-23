@@ -47,6 +47,12 @@
       <view class="invite-box">
         <text class="invite-label">我的邀请码</text>
         <text class="invite-code">{{ syncConfig.inviteCode || '还没有创建' }}</text>
+        <text class="sync-tip">成员：{{ syncConfig.memberCount || 0 }}/2</text>
+      </view>
+
+      <view class="sync-scope">
+        <text class="scope-line">会同步：昵称、愿望、文字回忆、每日回答和小计划记录。</text>
+        <text class="scope-line">仅本机：已选择照片的本地文件本身，后端只保存路径。</text>
       </view>
 
       <button class="primary-button tap-target" :class="{ disabled: syncing }" hover-class="button-hover" @tap="handleCreateInvite">
@@ -60,6 +66,12 @@
 
       <button class="ghost-button tap-target" :class="{ disabled: syncing || !syncConfig.coupleId }" hover-class="soft-hover" @tap="handleSyncNow">
         {{ syncing ? '同步中...' : '立即同步' }}
+      </button>
+      <button class="ghost-button tap-target" :class="{ disabled: syncing || !syncConfig.token }" hover-class="soft-hover" @tap="handleRefreshStatus">
+        刷新空间状态
+      </button>
+      <button v-if="syncConfig.coupleId" class="ghost-button tap-target danger-button" :class="{ disabled: syncing }" hover-class="soft-hover" @tap="confirmLeaveCouple">
+        退出情侣空间
       </button>
 
       <text v-if="syncConfig.lastSyncedAt" class="sync-tip">上次同步：{{ syncConfig.lastSyncedAt }}</text>
@@ -103,7 +115,9 @@ import {
   getActiveWishes,
   getBackendSyncConfig,
   joinCoupleByInvite,
+  leaveCoupleSpace,
   loadState,
+  refreshCoupleStatus,
   resetState,
   setBackendApiBaseUrl,
   syncNow,
@@ -207,6 +221,23 @@ function handleSyncNow() {
   }
   saveApiBaseUrl()
   runSyncTask(() => syncNow({ full: true }), '同步完成')
+}
+
+function handleRefreshStatus() {
+  runSyncTask(() => refreshCoupleStatus(), '状态已刷新')
+}
+
+function confirmLeaveCouple() {
+  uni.showModal({
+    title: '退出情侣空间',
+    content: '退出后本机数据会保留，但不会继续和对方同步。确定退出吗？',
+    confirmText: '退出',
+    confirmColor: '#d75d4b',
+    success: (res) => {
+      if (!res.confirm) return
+      runSyncTask(() => leaveCoupleSpace(), '已退出情侣空间')
+    }
+  })
 }
 
 function confirmReset() {
@@ -361,6 +392,22 @@ function confirmReset() {
   padding: 22rpx;
 }
 
+.sync-scope {
+  display: flex;
+  flex-direction: column;
+  gap: 8rpx;
+  border-radius: 18rpx;
+  background: #fff8f3;
+  margin-bottom: 18rpx;
+  padding: 18rpx 20rpx;
+}
+
+.scope-line {
+  color: #765a52;
+  font-size: 23rpx;
+  line-height: 1.45;
+}
+
 .invite-label {
   display: block;
   color: #8a645a;
@@ -389,6 +436,10 @@ function confirmReset() {
 }
 
 .sync-error {
+  color: #a7483d;
+}
+
+.danger-button {
   color: #a7483d;
 }
 

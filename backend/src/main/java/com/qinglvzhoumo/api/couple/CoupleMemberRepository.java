@@ -10,4 +10,6 @@ public interface CoupleMemberRepository extends JpaRepository<CoupleMember, Long
   long countByCoupleId(Long coupleId);
 
   List<CoupleMember> findAllByCoupleId(Long coupleId);
+
+  void deleteByUserId(Long userId);
 }

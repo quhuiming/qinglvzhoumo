@@ -58,6 +58,41 @@ public class CoupleService {
     return response(couple);
   }
 
+  @Transactional(readOnly = true)
+  public CoupleDtos.CoupleStatusResponse status(AuthenticatedUser user) {
+    CoupleMember member = memberRepository.findByUserId(user.id()).orElse(null);
+    if (member == null) {
+      return new CoupleDtos.CoupleStatusResponse(
+          user.id(),
+          user.account().getNickname(),
+          null,
+          "",
+          0
+      );
+    }
+    Couple couple = coupleRepository.findById(member.getCoupleId())
+        .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "COUPLE_NOT_FOUND", "情侣空间不存在"));
+    return new CoupleDtos.CoupleStatusResponse(
+        user.id(),
+        user.account().getNickname(),
+        couple.getId(),
+        couple.getInviteCode(),
+        memberRepository.countByCoupleId(couple.getId())
+    );
+  }
+
+  @Transactional
+  public CoupleDtos.CoupleStatusResponse leave(AuthenticatedUser user) {
+    memberRepository.deleteByUserId(user.id());
+    return new CoupleDtos.CoupleStatusResponse(
+        user.id(),
+        user.account().getNickname(),
+        null,
+        "",
+        0
+    );
+  }
+
   public Long requireCoupleId(AuthenticatedUser user) {
     return memberRepository.findByUserId(user.id())
         .map(CoupleMember::getCoupleId)
