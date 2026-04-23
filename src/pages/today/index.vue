@@ -829,16 +829,16 @@ function closeWishPopup() {
   top: 0;
   bottom: 0;
   display: flex;
-  align-items: flex-end;
+  align-items: center;
   justify-content: center;
   background: rgba(58, 38, 32, 0.34);
-  padding: 32rpx 24rpx;
+  padding: 32rpx 36rpx;
 }
 
 .wish-popup {
   width: 100%;
-  max-width: 700rpx;
-  max-height: 70vh;
+  max-width: 640rpx;
+  max-height: 68vh;
   overflow: hidden;
   padding: 28rpx;
   background: #fffaf6;
