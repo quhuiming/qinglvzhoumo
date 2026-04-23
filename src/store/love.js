@@ -293,6 +293,29 @@ function findTodayEntry(state) {
   return state.dailyEntries.find((entry) => entry.date === state.today.date && !entry.deletedAt)
 }
 
+function syncTodayFromDailyEntry(state) {
+  const entry = findTodayEntry(state)
+  if (!entry) return state
+  if (entry.question && !state.today.question) {
+    state.today.question = entry.question
+  }
+  if (entry.answer && !state.today.answer) {
+    state.today.answer = entry.answer
+    state.today.answeredAt = entry.answeredAt || state.today.answeredAt
+  }
+  if (entry.planId) {
+    state.today.planId = entry.planId
+    const completed = new Set(state.today.completedPlanIds || [])
+    if (entry.planDone) {
+      completed.add(entry.planId)
+    } else {
+      completed.delete(entry.planId)
+    }
+    state.today.completedPlanIds = Array.from(completed)
+  }
+  return state
+}
+
 function upsertDailyEntry(state, patch) {
   const current = findTodayEntry(state)
   const base = current || normalizeDailyEntry({
@@ -433,7 +456,7 @@ function mergeRemoteItems(state, items) {
       state.dailyEntries = mergeDailyEntryList(state.dailyEntries, item)
     }
   })
-  return normalizeState(state)
+  return syncTodayFromDailyEntry(normalizeState(state))
 }
 
 function markSyncError(error) {
@@ -536,7 +559,7 @@ export function initializeBackendSync() {
 
 export function loadState() {
   const saved = uni.getStorageSync(STORAGE_KEY) || uni.getStorageSync(LEGACY_STORAGE_KEY)
-  const state = rolloverToday(normalizeState(saved))
+  const state = syncTodayFromDailyEntry(rolloverToday(normalizeState(saved)))
   saveState(state)
   return state
 }
@@ -566,6 +589,7 @@ export function drawPlan() {
   const plans = pool.length ? pool : state.plans
   const next = plans[Math.floor(Math.random() * plans.length)]
   state.today.planId = next.id
+  state.today.completedPlanIds = state.today.completedPlanIds.filter((id) => id === next.id)
   upsertDailyEntry(state, withOwner({
     question: state.today.question,
     answer: state.today.answer,
@@ -750,6 +774,10 @@ export function getActiveDailyEntries(state) {
 
 export function getLatestDailyEntry(state) {
   return activeDailyEntries(state)[0]
+}
+
+export function getTodaySharedEntry(state) {
+  return findTodayEntry(state)
 }
 
 export function getActiveWishes(state) {

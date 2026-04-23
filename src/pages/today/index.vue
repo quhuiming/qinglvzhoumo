@@ -158,6 +158,7 @@ import {
   getMilestoneMessage,
   getPartnerActivities,
   getTodayAnswerPair,
+  getTodaySharedEntry,
   loadState,
   saveDailyAnswer,
   toggleTodayPlanDone
@@ -168,8 +169,23 @@ const answerDraft = ref(state.value.today.answer || '')
 
 const loveDays = computed(() => countLoveDays(state.value.profile.startDate))
 const dailyQuestion = computed(() => getDailyQuestion(state.value))
-const currentPlan = computed(() => state.value.plans.find((item) => item.id === state.value.today.planId))
-const isPlanDone = computed(() => currentPlan.value && state.value.today.completedPlanIds.includes(currentPlan.value.id))
+const todaySharedEntry = computed(() => getTodaySharedEntry(state.value))
+const currentPlan = computed(() => {
+  const planId = todaySharedEntry.value?.planId || state.value.today.planId
+  const plan = state.value.plans.find((item) => item.id === planId)
+  if (plan) return plan
+  if (!todaySharedEntry.value?.planId) return null
+  return {
+    id: todaySharedEntry.value.planId,
+    title: todaySharedEntry.value.planTitle,
+    detail: todaySharedEntry.value.planDetail
+  }
+})
+const isPlanDone = computed(() => {
+  if (!currentPlan.value) return false
+  if (todaySharedEntry.value?.planId === currentPlan.value.id) return Boolean(todaySharedEntry.value.planDone)
+  return state.value.today.completedPlanIds.includes(currentPlan.value.id)
+})
 const hasAnswer = computed(() => Boolean(state.value.today.answer.trim()))
 const canSaveAnswer = computed(() => Boolean(answerDraft.value.trim()) && answerDraft.value.trim() !== state.value.today.answer)
 const isTodayComplete = computed(() => hasAnswer.value && isPlanDone.value)
