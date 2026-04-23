@@ -15,7 +15,7 @@
       </view>
 
       <view v-if="dailyEntries.length" class="daily-list">
-        <view v-for="entry in dailyEntries" :key="entry.id" class="daily-item soft-card" @tap="toggleDailyDetail(entry.id)">
+        <view v-for="entry in dailyEntries" :key="entry.id" class="daily-item soft-card">
           <view class="daily-head">
             <view>
               <text class="daily-date">{{ formatFriendlyDate(entry.date) }}</text>
@@ -23,7 +23,9 @@
             </view>
             <button class="text-action danger" @tap.stop="confirmDeleteDaily(entry)">删除</button>
           </view>
-          <text class="daily-question">“{{ entry.question }}”</text>
+          <view class="record-block answer-block">
+            <text class="record-label">每日回答</text>
+            <text class="daily-question">“{{ entry.question }}”</text>
           <view v-if="entry.answers && entry.answers.length" class="answer-list">
             <view v-for="(answer, index) in entry.answers" :key="answer.actorKey" class="answer-row">
               <text class="answer-role">{{ index === 0 ? '一方的回答' : '另一方的回答' }}</text>
@@ -31,9 +33,14 @@
             </view>
           </view>
           <text v-else-if="entry.answer" class="daily-answer">{{ entry.answer }}</text>
-          <view v-if="openedDailyId === entry.id" class="daily-detail">
-            <text class="detail-line">回答时间：{{ formatShortTime(entry.answeredAt) || '未记录' }}</text>
-            <text class="detail-line">小计划：{{ entry.planTitle || '还没有抽取' }}</text>
+          <text v-else class="record-empty">还没有回答</text>
+          </view>
+          <view class="record-block plan-block">
+            <view class="plan-record-head">
+              <text class="record-label">今日小计划</text>
+              <text class="plan-record-status" :class="{ done: entry.planDone }">{{ entry.planDone ? '已完成' : '未完成' }}</text>
+            </view>
+            <text class="plan-record-title">{{ entry.planTitle || '还没有抽取小计划' }}</text>
             <text v-if="entry.planDetail" class="detail-line">{{ entry.planDetail }}</text>
             <text class="detail-line">完成时间：{{ formatShortTime(entry.planCompletedAt) || '未完成' }}</text>
           </view>
@@ -116,7 +123,6 @@ const MEMORY_DRAFT_KEY = 'qinglvzhoumo.memory.draft.v1'
 const colors = ['#f9b38d', '#ff8b75', '#e8ad79', '#f2c1b2']
 const state = ref(loadState())
 const editingId = ref('')
-const openedDailyId = ref('')
 const form = reactive({
   title: '',
   date: getTodayString(),
@@ -237,10 +243,6 @@ function resetForm() {
   form.image = ''
 }
 
-function toggleDailyDetail(id) {
-  openedDailyId.value = openedDailyId.value === id ? '' : id
-}
-
 function confirmDeleteDaily(entry) {
   uni.showModal({
     title: '删除每日记录',
@@ -250,7 +252,6 @@ function confirmDeleteDaily(entry) {
     success: (res) => {
       if (!res.confirm) return
       state.value = deleteDailyEntry(entry.id)
-      if (openedDailyId.value === entry.id) openedDailyId.value = ''
     }
   })
 }
@@ -340,6 +341,63 @@ function confirmDelete(memory) {
   color: #d06451;
   font-size: 22rpx;
   font-weight: 800;
+}
+
+.record-block {
+  border-radius: 22rpx;
+  background: #fff8f3;
+  margin-top: 18rpx;
+  padding: 18rpx;
+}
+
+.plan-block {
+  background: #fff0e8;
+}
+
+.record-label {
+  display: block;
+  color: #c95b49;
+  font-size: 22rpx;
+  font-weight: 900;
+}
+
+.record-empty {
+  display: block;
+  color: #8a645a;
+  font-size: 24rpx;
+  line-height: 1.45;
+  margin-top: 12rpx;
+}
+
+.plan-record-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16rpx;
+}
+
+.plan-record-status {
+  flex: 0 0 auto;
+  border-radius: 999rpx;
+  background: #fffaf6;
+  color: #9a6b60;
+  font-size: 21rpx;
+  font-weight: 900;
+  padding: 8rpx 16rpx;
+}
+
+.plan-record-status.done {
+  background: #ffe2d4;
+  color: #d75d4b;
+}
+
+.plan-record-title {
+  display: block;
+  color: #513832;
+  font-size: 29rpx;
+  font-weight: 900;
+  line-height: 1.4;
+  margin-top: 14rpx;
 }
 
 .daily-question {
