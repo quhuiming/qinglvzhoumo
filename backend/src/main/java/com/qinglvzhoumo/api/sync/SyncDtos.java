@@ -12,6 +12,7 @@ public class SyncDtos {
       @NotBlank(message = "clientId 不能为空") String clientId,
       JsonNode payload,
       Long version,
+      Long authorUserId,
       String updatedAt,
       String deletedAt
   ) {}
@@ -23,6 +24,7 @@ public class SyncDtos {
       String clientId,
       JsonNode payload,
       Long version,
+      Long authorUserId,
       String updatedAt,
       String deletedAt,
       String serverUpdatedAt

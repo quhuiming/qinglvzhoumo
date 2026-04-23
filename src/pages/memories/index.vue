@@ -24,7 +24,13 @@
             <button class="text-action danger" @tap.stop="confirmDeleteDaily(entry)">删除</button>
           </view>
           <text class="daily-question">“{{ entry.question }}”</text>
-          <text v-if="entry.answer" class="daily-answer">{{ entry.answer }}</text>
+          <view v-if="entry.answers && entry.answers.length" class="answer-list">
+            <view v-for="(answer, index) in entry.answers" :key="answer.actorKey" class="answer-row">
+              <text class="answer-role">{{ index === 0 ? '一方的回答' : '另一方的回答' }}</text>
+              <text class="daily-answer">{{ answer.text }}</text>
+            </view>
+          </view>
+          <text v-else-if="entry.answer" class="daily-answer">{{ entry.answer }}</text>
           <view v-if="openedDailyId === entry.id" class="daily-detail">
             <text class="detail-line">回答时间：{{ formatShortTime(entry.answeredAt) || '未记录' }}</text>
             <text class="detail-line">小计划：{{ entry.planTitle || '还没有抽取' }}</text>
@@ -106,6 +112,7 @@ import {
 } from '../../store/love'
 import { formatFriendlyDate, formatShortTime, getTodayString } from '../../utils/date'
 
+const MEMORY_DRAFT_KEY = 'qinglvzhoumo.memory.draft.v1'
 const colors = ['#f9b38d', '#ff8b75', '#e8ad79', '#f2c1b2']
 const state = ref(loadState())
 const editingId = ref('')
@@ -123,7 +130,19 @@ const dailyEntries = computed(() => getActiveDailyEntries(state.value))
 
 onShow(() => {
   state.value = loadState()
+  applyMemoryDraft()
 })
+
+function applyMemoryDraft() {
+  const draft = uni.getStorageSync(MEMORY_DRAFT_KEY)
+  if (!draft) return
+  form.title = draft.title || ''
+  form.date = draft.date || getTodayString()
+  form.description = draft.description || ''
+  form.image = draft.image || ''
+  editingId.value = ''
+  uni.removeStorageSync(MEMORY_DRAFT_KEY)
+}
 
 function coverBackground(color) {
   return `linear-gradient(135deg, ${color || '#f9b38d'} 0%, #fff0df 100%)`
@@ -295,6 +314,30 @@ function confirmDelete(memory) {
   font-size: 28rpx;
   font-weight: 800;
   line-height: 1.45;
+}
+
+.answer-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12rpx;
+  margin-top: 14rpx;
+}
+
+.answer-row {
+  border-radius: 18rpx;
+  background: #fff8f3;
+  padding: 16rpx;
+}
+
+.answer-row .daily-answer {
+  margin-top: 6rpx;
+}
+
+.answer-role {
+  display: block;
+  color: #c95b49;
+  font-size: 21rpx;
+  font-weight: 900;
 }
 
 .daily-detail {

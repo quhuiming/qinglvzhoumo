@@ -63,8 +63,10 @@ mvn -s maven-settings.xml test "-Dspring.profiles.active=test"
 ## 核心接口
 
 - `POST /api/auth/anonymous`：匿名设备登录，返回 `token`
+- `GET /api/couples/me`：查看当前设备的情侣空间状态
 - `POST /api/couples/invite`：生成或获取情侣邀请码
 - `POST /api/couples/join`：输入邀请码加入情侣空间
+- `POST /api/couples/leave`：当前设备退出情侣空间，本机数据不删除
 - `GET /api/sync`：拉取当前情侣空间共享数据
 - `POST /api/sync`：上传愿望、回忆、每日记录等同步项
 

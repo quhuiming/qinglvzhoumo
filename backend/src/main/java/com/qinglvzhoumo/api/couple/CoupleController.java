@@ -2,6 +2,7 @@ package com.qinglvzhoumo.api.couple;
 
 import com.qinglvzhoumo.api.security.AuthenticatedUser;
 import jakarta.validation.Valid;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -21,8 +22,18 @@ public class CoupleController {
     return coupleService.createOrGetInvite(user);
   }
 
+  @GetMapping("/me")
+  public CoupleDtos.CoupleStatusResponse me(AuthenticatedUser user) {
+    return coupleService.status(user);
+  }
+
   @PostMapping("/join")
   public CoupleDtos.CoupleResponse join(AuthenticatedUser user, @Valid @RequestBody CoupleDtos.JoinRequest request) {
     return coupleService.join(user, request);
+  }
+
+  @PostMapping("/leave")
+  public CoupleDtos.CoupleStatusResponse leave(AuthenticatedUser user) {
+    return coupleService.leave(user);
   }
 }

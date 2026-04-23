@@ -11,6 +11,7 @@
           <text class="line"></text>
           <view class="heart-mark"></view>
         </view>
+        <text v-if="milestoneMessage" class="milestone">{{ milestoneMessage }}</text>
       </view>
 
       <view class="progress-card soft-card">
@@ -49,6 +50,16 @@
             保存回答
           </button>
         </view>
+        <view class="answer-pair">
+          <view class="answer-bubble">
+            <text class="bubble-label">我的回答</text>
+            <text class="bubble-text">{{ answerPair.mine ? answerPair.mine.text : '还没有写下今天的想法' }}</text>
+          </view>
+          <view class="answer-bubble partner">
+            <text class="bubble-label">TA 的回答</text>
+            <text class="bubble-text">{{ answerPair.partner ? answerPair.partner.text : '同步后会看到对方的回答' }}</text>
+          </view>
+        </view>
       </view>
 
       <view class="plan-card soft-card">
@@ -82,6 +93,17 @@
         <text class="complete-copy">回答和小计划已经进入每日记录，之后可以在回忆页慢慢翻。</text>
       </view>
 
+      <view class="partner-card soft-card">
+        <view class="quick-head">
+          <view class="card-icon activity-icon" aria-hidden="true"></view>
+          <text>对方动态</text>
+        </view>
+        <view v-if="partnerActivities.length" class="activity-list">
+          <text v-for="activity in partnerActivities" :key="activity.id" class="activity-line">{{ activity.text }}</text>
+        </view>
+        <text v-else class="quick-text">绑定并同步后，这里会出现 TA 新增、完成和回答的动态。</text>
+      </view>
+
       <view class="quick-grid">
         <view class="quick-card soft-card">
           <view class="quick-head">
@@ -112,6 +134,12 @@
         <text class="history-title">{{ latestDailyEntry.answer || latestDailyEntry.planTitle }}</text>
         <text class="history-date">{{ latestDailyEntry.date }}</text>
       </view>
+
+      <view v-if="latestTimelineItem" class="history-card soft-card" @tap="goMemories">
+        <text class="history-label">最近完成</text>
+        <text class="history-title">{{ latestTimelineItem.text }}</text>
+        <text class="history-date">{{ latestTimelineItem.date }}</text>
+      </view>
     </view>
   </view>
 </template>
@@ -126,6 +154,10 @@ import {
   getActiveWishes,
   getDailyQuestion,
   getLatestDailyEntry,
+  getLatestTimelineItem,
+  getMilestoneMessage,
+  getPartnerActivities,
+  getTodayAnswerPair,
   loadState,
   saveDailyAnswer,
   toggleTodayPlanDone
@@ -146,6 +178,10 @@ const pendingWishCount = computed(() => pendingWishes.value.length)
 const nextWish = computed(() => pendingWishes.value[0])
 const latestMemory = computed(() => getActiveMemories(state.value)[0])
 const latestDailyEntry = computed(() => getLatestDailyEntry(state.value))
+const latestTimelineItem = computed(() => getLatestTimelineItem(state.value))
+const partnerActivities = computed(() => getPartnerActivities(state.value))
+const answerPair = computed(() => getTodayAnswerPair(state.value))
+const milestoneMessage = computed(() => getMilestoneMessage(loveDays.value))
 const answerTimeText = computed(() => formatShortTime(state.value.today.answeredAt))
 const progressTitle = computed(() => {
   if (isTodayComplete.value) return '今天已经完成，两个人都靠近了一点'
@@ -239,6 +275,18 @@ function goMemories() {
   color: #7e5a50;
   font-size: 25rpx;
   font-weight: 700;
+}
+
+.milestone {
+  display: block;
+  border-radius: 999rpx;
+  background: rgba(255, 248, 243, 0.76);
+  color: #c95b49;
+  font-size: 23rpx;
+  font-weight: 900;
+  line-height: 1.35;
+  margin-top: 18rpx;
+  padding: 12rpx 22rpx;
 }
 
 .line {
@@ -387,6 +435,38 @@ function goMemories() {
   justify-content: space-between;
   gap: 18rpx;
   margin-top: 18rpx;
+}
+
+.answer-pair {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14rpx;
+  margin-top: 20rpx;
+}
+
+.answer-bubble {
+  border-radius: 18rpx;
+  background: #fff8f3;
+  padding: 18rpx;
+}
+
+.answer-bubble.partner {
+  background: #fff0e9;
+}
+
+.bubble-label {
+  display: block;
+  color: #c95b49;
+  font-size: 21rpx;
+  font-weight: 900;
+}
+
+.bubble-text {
+  display: block;
+  margin-top: 8rpx;
+  color: #5f433d;
+  font-size: 24rpx;
+  line-height: 1.45;
 }
 
 .answer-meta {
@@ -610,12 +690,43 @@ function goMemories() {
 }
 
 .complete-card,
-.history-card {
+.history-card,
+.partner-card {
   display: flex;
   flex-direction: column;
   gap: 8rpx;
   margin-top: 24rpx;
   padding: 24rpx;
+}
+
+.activity-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12rpx;
+  margin-top: 18rpx;
+}
+
+.activity-line {
+  color: #5f433d;
+  font-size: 25rpx;
+  font-weight: 800;
+  line-height: 1.45;
+}
+
+.activity-icon {
+  border: 3rpx solid currentColor;
+  border-radius: 50%;
+}
+
+.activity-icon::after {
+  position: absolute;
+  left: 9rpx;
+  top: 9rpx;
+  width: 10rpx;
+  height: 10rpx;
+  border-radius: 50%;
+  background: currentColor;
+  content: '';
 }
 
 .complete-label,
@@ -785,6 +896,10 @@ function goMemories() {
   .answer-actions {
     align-items: stretch;
     flex-direction: column;
+  }
+
+  .answer-pair {
+    grid-template-columns: 1fr;
   }
 
   .quick-grid {

@@ -115,6 +115,19 @@ export async function createInvite(nickname = '') {
   })
 }
 
+export async function getCoupleStatus(nickname = '') {
+  await ensureAnonymousAuth(nickname)
+  const data = await requestBackend('/api/couples/me')
+  return saveSyncConfig({
+    userId: data.userId,
+    coupleId: data.coupleId || '',
+    inviteCode: data.inviteCode || '',
+    memberCount: data.memberCount || 0,
+    enabled: Boolean(data.coupleId),
+    lastError: ''
+  })
+}
+
 export async function joinInvite(inviteCode, nickname = '') {
   await ensureAnonymousAuth(nickname)
   const data = await requestBackend('/api/couples/join', {
@@ -126,6 +139,19 @@ export async function joinInvite(inviteCode, nickname = '') {
     inviteCode: data.inviteCode,
     memberCount: data.memberCount,
     enabled: true,
+    lastError: ''
+  })
+}
+
+export async function leaveCouple() {
+  const data = await requestBackend('/api/couples/leave', { method: 'POST' })
+  return saveSyncConfig({
+    userId: data.userId,
+    coupleId: '',
+    inviteCode: '',
+    memberCount: 0,
+    enabled: false,
+    lastPulledAt: '',
     lastError: ''
   })
 }

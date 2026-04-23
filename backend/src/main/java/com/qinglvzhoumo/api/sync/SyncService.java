@@ -37,16 +37,17 @@ public class SyncService {
   public SyncDtos.SyncResponse push(AuthenticatedUser user, SyncDtos.SyncPushRequest request) {
     Long coupleId = coupleService.requireCoupleId(user);
     List<SyncItem> saved = request.items().stream()
-        .map(item -> upsert(coupleId, item))
+        .map(item -> upsert(coupleId, user.id(), item))
         .toList();
     return new SyncDtos.SyncResponse(saved.stream().map(this::toResponse).toList(), Instant.now().toString());
   }
 
-  private SyncItem upsert(Long coupleId, SyncDtos.SyncItemRequest request) {
+  private SyncItem upsert(Long coupleId, Long authorUserId, SyncDtos.SyncItemRequest request) {
     SyncItem item = syncItemRepository
         .findByCoupleIdAndTypeAndClientId(coupleId, request.type(), request.clientId())
         .orElseGet(SyncItem::new);
     item.setCoupleId(coupleId);
+    item.setAuthorUserId(item.getAuthorUserId() == null ? authorUserId : item.getAuthorUserId());
     item.setType(request.type());
     item.setClientId(request.clientId());
     item.setPayload(writePayload(request.payload()));
@@ -62,6 +63,7 @@ public class SyncService {
         item.getClientId(),
         readPayload(item.getPayload()),
         item.getVersion(),
+        item.getAuthorUserId(),
         item.getClientUpdatedAt(),
         item.getDeletedAt(),
         item.getServerUpdatedAt().toString()
