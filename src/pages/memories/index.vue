@@ -15,7 +15,7 @@
       </view>
 
       <view v-if="dailyEntries.length" class="daily-list">
-        <view v-for="entry in dailyEntries" :key="entry.id" class="daily-item soft-card">
+        <view v-for="(entry, index) in dailyEntries" :key="entry.id" class="daily-item soft-card" @tap="toggleDailyEntry(entry.id)">
           <view class="daily-head">
             <view>
               <text class="daily-date">{{ formatFriendlyDate(entry.date) }}</text>
@@ -23,7 +23,8 @@
             </view>
             <button class="text-action danger" @tap.stop="confirmDeleteDaily(entry)">删除</button>
           </view>
-          <view class="record-block answer-block">
+          <text v-if="!isDailyExpanded(entry, index)" class="daily-summary">{{ entry.answer || entry.planTitle || '点击查看这一天的记录' }}</text>
+          <view v-if="isDailyExpanded(entry, index)" class="record-block answer-block">
             <text class="record-label">每日回答</text>
             <text class="daily-question">“{{ entry.question }}”</text>
           <view v-if="entry.answers && entry.answers.length" class="answer-list">
@@ -35,7 +36,7 @@
           <text v-else-if="entry.answer" class="daily-answer">{{ entry.answer }}</text>
           <text v-else class="record-empty">还没有回答</text>
           </view>
-          <view class="record-block plan-block">
+          <view v-if="isDailyExpanded(entry, index)" class="record-block plan-block">
             <view class="plan-record-head">
               <text class="record-label">今日小计划</text>
               <text class="plan-record-status" :class="{ done: entry.planDone }">{{ entry.planDone ? '已完成' : '未完成' }}</text>
@@ -123,6 +124,7 @@ const MEMORY_DRAFT_KEY = 'qinglvzhoumo.memory.draft.v1'
 const colors = ['#f9b38d', '#ff8b75', '#e8ad79', '#f2c1b2']
 const state = ref(loadState())
 const editingId = ref('')
+const openedDailyIds = ref([])
 const form = reactive({
   title: '',
   date: getTodayString(),
@@ -136,8 +138,23 @@ const dailyEntries = computed(() => getActiveDailyEntries(state.value))
 
 onShow(() => {
   state.value = loadState()
+  openedDailyIds.value = []
   applyMemoryDraft()
 })
+
+function isDailyExpanded(entry, index) {
+  return index === 0 || openedDailyIds.value.includes(entry.id)
+}
+
+function toggleDailyEntry(id) {
+  const opened = new Set(openedDailyIds.value)
+  if (opened.has(id)) {
+    opened.delete(id)
+  } else {
+    opened.add(id)
+  }
+  openedDailyIds.value = Array.from(opened)
+}
 
 function applyMemoryDraft() {
   const draft = uni.getStorageSync(MEMORY_DRAFT_KEY)
@@ -341,6 +358,15 @@ function confirmDelete(memory) {
   color: #d06451;
   font-size: 22rpx;
   font-weight: 800;
+}
+
+.daily-summary {
+  display: block;
+  color: #5f433d;
+  font-size: 26rpx;
+  font-weight: 800;
+  line-height: 1.45;
+  margin-top: 18rpx;
 }
 
 .record-block {
