@@ -106,7 +106,7 @@
       </view>
 
       <view class="quick-grid">
-        <view class="quick-card soft-card">
+        <view class="quick-card soft-card wish-preview-card" @tap="openWishPopup">
           <view class="quick-head">
             <view class="card-icon list-icon" aria-hidden="true"></view>
             <text>共同愿望</text>
@@ -142,6 +142,22 @@
         <text class="history-date">{{ latestTimelineItem.date }}</text>
       </view>
     </view>
+
+    <view v-if="wishPopupVisible" class="popup-mask" @tap="closeWishPopup">
+      <view class="wish-popup soft-card" @tap.stop>
+        <view class="popup-head">
+          <text class="popup-title">共同愿望</text>
+          <button class="popup-close tap-target" hover-class="soft-hover" @tap="closeWishPopup">×</button>
+        </view>
+        <view v-if="pendingWishes.length" class="popup-list">
+          <view v-for="wish in pendingWishes" :key="wish.id" class="popup-wish">
+            <view class="popup-dot"></view>
+            <text class="popup-wish-text">{{ wish.title }}</text>
+          </view>
+        </view>
+        <text v-else class="popup-empty">还没有待完成愿望</text>
+      </view>
+    </view>
   </view>
 </template>
 
@@ -167,6 +183,7 @@ import {
 
 const state = ref(loadState())
 const answerDraft = ref(state.value.today.answer || '')
+const wishPopupVisible = ref(false)
 
 const loveDays = computed(() => countLoveDays(state.value.profile.startDate))
 const dailyQuestion = computed(() => getDailyQuestion(state.value))
@@ -251,6 +268,14 @@ function handleToggleDone() {
 
 function goMemories() {
   uni.switchTab({ url: '/pages/memories/index' })
+}
+
+function openWishPopup() {
+  wishPopupVisible.value = true
+}
+
+function closeWishPopup() {
+  wishPopupVisible.value = false
 }
 </script>
 
@@ -790,6 +815,105 @@ function goMemories() {
   min-height: 258rpx;
   overflow: hidden;
   padding: 26rpx 18rpx 20rpx;
+}
+
+.wish-preview-card {
+  cursor: pointer;
+}
+
+.popup-mask {
+  position: fixed;
+  z-index: 30;
+  left: 0;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  background: rgba(58, 38, 32, 0.34);
+  padding: 32rpx 24rpx;
+}
+
+.wish-popup {
+  width: 100%;
+  max-width: 700rpx;
+  max-height: 70vh;
+  overflow: hidden;
+  padding: 28rpx;
+  background: #fffaf6;
+}
+
+.popup-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20rpx;
+  border-bottom: 1rpx solid rgba(171, 112, 91, 0.16);
+  padding-bottom: 18rpx;
+}
+
+.popup-title {
+  color: #553a35;
+  font-size: 32rpx;
+  font-weight: 900;
+}
+
+.popup-close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 56rpx;
+  width: 56rpx;
+  height: 56rpx;
+  border-radius: 50%;
+  background: #fff0e9;
+  color: #c95b49;
+  font-size: 36rpx;
+  font-weight: 700;
+}
+
+.popup-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16rpx;
+  max-height: 52vh;
+  overflow-y: auto;
+  padding-top: 22rpx;
+}
+
+.popup-wish {
+  display: flex;
+  align-items: flex-start;
+  gap: 16rpx;
+  border-radius: 20rpx;
+  background: #fff3ec;
+  padding: 20rpx;
+}
+
+.popup-dot {
+  flex: 0 0 18rpx;
+  width: 18rpx;
+  height: 18rpx;
+  border-radius: 50%;
+  background: #ff8069;
+  margin-top: 10rpx;
+}
+
+.popup-wish-text {
+  color: #5f433d;
+  font-size: 27rpx;
+  font-weight: 800;
+  line-height: 1.45;
+}
+
+.popup-empty {
+  display: block;
+  color: #7d5f56;
+  font-size: 26rpx;
+  line-height: 1.5;
+  padding: 34rpx 0 8rpx;
+  text-align: center;
 }
 
 .quick-head {
