@@ -26,6 +26,12 @@
 ### 2.2 基础校验命令
 
 ```powershell
+npm run check:h5-inputs
+```
+
+预期结果：H5 输入框 CSS 回归检查通过，避免 `uni-input` 内部原生输入层高度被压成 0。
+
+```powershell
 npm run build:h5
 ```
 

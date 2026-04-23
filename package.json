@@ -6,6 +6,8 @@
   "scripts": {
     "dev:h5": "uni --host 0.0.0.0",
     "dev:app": "uni -p app",
+    "check:h5-inputs": "node scripts/check-h5-input-css.mjs",
+    "verify:h5": "npm run check:h5-inputs && npm run build:h5",
     "build:h5": "uni build",
     "build:app": "uni build -p app"
   },

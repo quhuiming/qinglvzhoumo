@@ -33,8 +33,7 @@ input,
 textarea {
   color: #5f433d;
   font: inherit;
-  position: relative;
-  z-index: 2;
+  /* Keep raw uni-app H5 native inputs unpositioned; sizing is handled by field classes below. */
   user-select: text;
   -webkit-user-select: text;
 }
@@ -114,6 +113,8 @@ textarea {
 .field-input,
 .field-textarea {
   display: block;
+  position: relative;
+  z-index: 2;
   width: 100%;
   border: 1rpx solid rgba(158, 98, 78, 0.2);
   border-radius: 20rpx;
@@ -124,9 +125,28 @@ textarea {
   line-height: 1.4;
 }
 
+.field-input {
+  height: 88rpx;
+  min-height: 88rpx;
+}
+
+/* H5 guard: uni-input renders an inner native input. Without these heights it can collapse to 0px. */
+.field-input .uni-input-wrapper,
+.field-input .uni-input-form,
+.field-input .uni-input-input {
+  min-height: 0;
+  height: 100%;
+}
+
 .field-textarea {
-  min-height: 152rpx;
+  height: 180rpx;
+  min-height: 180rpx;
   line-height: 1.55;
+}
+
+.field-textarea .uni-textarea-wrapper,
+.field-textarea .uni-textarea-textarea {
+  height: 100%;
 }
 
 .empty-state {

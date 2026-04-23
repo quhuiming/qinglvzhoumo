@@ -1,8 +1,10 @@
 <template>
   <view class="app-page">
     <view class="page-head">
-      <text class="section-title">最近回忆</text>
-      <text class="muted">日常回答、完成的小计划和约会片段都放在这里。</text>
+      <button class="info-trigger" @tap="toggleIntro">?</button>
+      <view v-if="introVisible" class="intro-popover soft-card">
+        <text class="intro-copy">日常回答、完成的小计划和约会片段都放在这里。</text>
+      </view>
     </view>
 
     <view class="daily-section">
@@ -15,35 +17,78 @@
       </view>
 
       <view v-if="dailyEntries.length" class="daily-list">
-        <view v-for="(entry, index) in dailyEntries" :key="entry.id" class="daily-item soft-card" @tap="toggleDailyEntry(entry.id)">
+        <view v-if="latestDailyEntry" class="daily-item soft-card">
           <view class="daily-head">
             <view>
-              <text class="daily-date">{{ formatFriendlyDate(entry.date) }}</text>
-              <text class="daily-status">{{ entry.planDone ? '已完成小计划' : '记录了一点想法' }}</text>
+              <text class="daily-date">{{ formatFriendlyDate(latestDailyEntry.date) }}</text>
+              <text class="daily-status">{{ latestDailyEntry.planDone ? '已完成小计划' : '记录了一点想法' }}</text>
             </view>
-            <button class="text-action danger" @tap.stop="confirmDeleteDaily(entry)">删除</button>
+            <button class="text-action danger" @tap.stop="confirmDeleteDaily(latestDailyEntry)">删除</button>
           </view>
-          <text v-if="!isDailyExpanded(entry, index)" class="daily-summary">{{ entry.answer || entry.planTitle || '点击查看这一天的记录' }}</text>
-          <view v-if="isDailyExpanded(entry, index)" class="record-block answer-block">
+          <view class="record-block answer-block">
             <text class="record-label">每日回答</text>
-            <text class="daily-question">“{{ entry.question }}”</text>
-          <view v-if="entry.answers && entry.answers.length" class="answer-list">
-            <view v-for="(answer, index) in entry.answers" :key="answer.actorKey" class="answer-row">
+            <text class="daily-question">“{{ latestDailyEntry.question }}”</text>
+          <view v-if="latestDailyEntry.answers && latestDailyEntry.answers.length" class="answer-list">
+            <view v-for="(answer, index) in latestDailyEntry.answers" :key="answer.actorKey" class="answer-row">
               <text class="answer-role">{{ index === 0 ? '一方的回答' : '另一方的回答' }}</text>
               <text class="daily-answer">{{ answer.text }}</text>
             </view>
           </view>
-          <text v-else-if="entry.answer" class="daily-answer">{{ entry.answer }}</text>
+          <text v-else-if="latestDailyEntry.answer" class="daily-answer">{{ latestDailyEntry.answer }}</text>
           <text v-else class="record-empty">还没有回答</text>
           </view>
-          <view v-if="isDailyExpanded(entry, index)" class="record-block plan-block">
+          <view class="record-block plan-block">
             <view class="plan-record-head">
               <text class="record-label">今日小计划</text>
-              <text class="plan-record-status" :class="{ done: entry.planDone }">{{ entry.planDone ? '已完成' : '未完成' }}</text>
+              <text class="plan-record-status" :class="{ done: latestDailyEntry.planDone }">{{ latestDailyEntry.planDone ? '已完成' : '未完成' }}</text>
             </view>
-            <text class="plan-record-title">{{ entry.planTitle || '还没有抽取小计划' }}</text>
-            <text v-if="entry.planDetail" class="detail-line">{{ entry.planDetail }}</text>
-            <text class="detail-line">完成时间：{{ formatShortTime(entry.planCompletedAt) || '未完成' }}</text>
+            <text class="plan-record-title">{{ latestDailyEntry.planTitle || '还没有抽取小计划' }}</text>
+            <text v-if="latestDailyEntry.planDetail" class="detail-line">{{ latestDailyEntry.planDetail }}</text>
+            <text class="detail-line">完成时间：{{ formatShortTime(latestDailyEntry.planCompletedAt) || '未完成' }}</text>
+          </view>
+        </view>
+
+        <view v-if="olderDailyEntries.length" class="history-group soft-card">
+          <view class="history-head" @tap="toggleHistoryFold">
+            <view>
+              <text class="history-title">更早的记录</text>
+              <text class="history-copy">还有 {{ olderDailyEntries.length }} 天，点一下展开看看</text>
+            </view>
+            <text class="history-toggle">{{ historyExpanded ? '收起' : '展开' }}</text>
+          </view>
+
+          <view v-if="historyExpanded" class="history-list">
+            <view v-for="entry in olderDailyEntries" :key="entry.id" class="daily-item soft-card" @tap="toggleDailyEntry(entry.id)">
+              <view class="daily-head">
+                <view>
+                  <text class="daily-date">{{ formatFriendlyDate(entry.date) }}</text>
+                  <text class="daily-status">{{ entry.planDone ? '已完成小计划' : '记录了一点想法' }}</text>
+                </view>
+                <button class="text-action danger" @tap.stop="confirmDeleteDaily(entry)">删除</button>
+              </view>
+              <text v-if="!isDailyExpanded(entry.id)" class="daily-summary">{{ entry.answer || entry.planTitle || '点击查看这一天的记录' }}</text>
+              <view v-if="isDailyExpanded(entry.id)" class="record-block answer-block">
+                <text class="record-label">每日回答</text>
+                <text class="daily-question">“{{ entry.question }}”</text>
+                <view v-if="entry.answers && entry.answers.length" class="answer-list">
+                  <view v-for="(answer, index) in entry.answers" :key="answer.actorKey" class="answer-row">
+                    <text class="answer-role">{{ index === 0 ? '一方的回答' : '另一方的回答' }}</text>
+                    <text class="daily-answer">{{ answer.text }}</text>
+                  </view>
+                </view>
+                <text v-else-if="entry.answer" class="daily-answer">{{ entry.answer }}</text>
+                <text v-else class="record-empty">还没有回答</text>
+              </view>
+              <view v-if="isDailyExpanded(entry.id)" class="record-block plan-block">
+                <view class="plan-record-head">
+                  <text class="record-label">今日小计划</text>
+                  <text class="plan-record-status" :class="{ done: entry.planDone }">{{ entry.planDone ? '已完成' : '未完成' }}</text>
+                </view>
+                <text class="plan-record-title">{{ entry.planTitle || '还没有抽取小计划' }}</text>
+                <text v-if="entry.planDetail" class="detail-line">{{ entry.planDetail }}</text>
+                <text class="detail-line">完成时间：{{ formatShortTime(entry.planCompletedAt) || '未完成' }}</text>
+              </view>
+            </view>
           </view>
         </view>
       </view>
@@ -125,6 +170,8 @@ const colors = ['#f9b38d', '#ff8b75', '#e8ad79', '#f2c1b2']
 const state = ref(loadState())
 const editingId = ref('')
 const openedDailyIds = ref([])
+const historyExpanded = ref(false)
+const introVisible = ref(false)
 const form = reactive({
   title: '',
   date: getTodayString(),
@@ -135,15 +182,19 @@ const form = reactive({
 const canSubmit = computed(() => form.title.trim() && form.description.trim())
 const activeMemories = computed(() => getActiveMemories(state.value))
 const dailyEntries = computed(() => getActiveDailyEntries(state.value))
+const latestDailyEntry = computed(() => dailyEntries.value[0] || null)
+const olderDailyEntries = computed(() => dailyEntries.value.slice(1))
 
 onShow(() => {
   state.value = loadState()
   openedDailyIds.value = []
+  historyExpanded.value = false
+  introVisible.value = false
   applyMemoryDraft()
 })
 
-function isDailyExpanded(entry, index) {
-  return index === 0 || openedDailyIds.value.includes(entry.id)
+function isDailyExpanded(id) {
+  return openedDailyIds.value.includes(id)
 }
 
 function toggleDailyEntry(id) {
@@ -154,6 +205,14 @@ function toggleDailyEntry(id) {
     opened.add(id)
   }
   openedDailyIds.value = Array.from(opened)
+}
+
+function toggleHistoryFold() {
+  historyExpanded.value = !historyExpanded.value
+}
+
+function toggleIntro() {
+  introVisible.value = !introVisible.value
 }
 
 function applyMemoryDraft() {
@@ -289,6 +348,45 @@ function confirmDelete(memory) {
 </script>
 
 <style scoped>
+.page-head {
+  position: relative;
+  min-height: 52rpx;
+}
+
+.info-trigger {
+  position: absolute;
+  top: 0;
+  right: 0;
+  flex: 0 0 auto;
+  width: 52rpx;
+  height: 52rpx;
+  border-radius: 50%;
+  border: 1rpx solid rgba(201, 91, 73, 0.16);
+  background: rgba(255, 255, 255, 0.72);
+  color: #c95b49;
+  font-size: 30rpx;
+  font-weight: 900;
+  line-height: 52rpx;
+  text-align: center;
+  padding: 0;
+}
+
+.intro-popover {
+  margin-top: 16rpx;
+  margin-left: auto;
+  max-width: 420rpx;
+  padding: 20rpx 22rpx;
+  border-color: rgba(201, 91, 73, 0.14);
+  margin-right: 0;
+}
+
+.intro-copy {
+  display: block;
+  color: #6f5149;
+  font-size: 24rpx;
+  line-height: 1.6;
+}
+
 .daily-section {
   margin-bottom: 30rpx;
 }
@@ -336,6 +434,45 @@ function confirmDelete(memory) {
 
 .daily-item {
   padding: 24rpx;
+}
+
+.history-group {
+  padding: 24rpx;
+}
+
+.history-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18rpx;
+}
+
+.history-title {
+  display: block;
+  color: #553a35;
+  font-size: 28rpx;
+  font-weight: 900;
+}
+
+.history-copy {
+  display: block;
+  margin-top: 8rpx;
+  color: #806257;
+  font-size: 23rpx;
+  line-height: 1.45;
+}
+
+.history-toggle {
+  flex: 0 0 auto;
+  color: #c95b49;
+  font-size: 24rpx;
+  font-weight: 900;
+}
+
+.history-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16rpx;
 }
 
 .daily-head {
